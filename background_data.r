@@ -21,20 +21,18 @@ mapBG.f <- fortify(mapBG)
 # fortify admin borders
 LaoAdmin0.f <- fortify(LaoAdmin0)
 LaoAdmin1.f <- fortify(LaoAdmin1)
-LaoAdmin2.f <- fortify(LaoAdmin2)
 
 
 sample <- sample(8215,2000)
 # create a sample
-WPIdata_sample <- WPIdata_orig[sample,]
-WPIdata_sample$dryWPIgpca <- WPIdata$dryWPIgpca[sample]
-WPIdata_sample$wetWPIgpca <- WPIdata$wetWPIgpca[sample]
+#WPIdata_sample <- WPIdata_orig[sample,]
+#WPIdata_sample$dryWPIgpca <- WPIdata$dryWPIgpca[sample]
+#WPIdata_sample$wetWPIgpca <- WPIdata$wetWPIgpca[sample]
 
 # load precalculated distMatrices, or calculate them with the following commands. Warning: May take a long time to finish.
-load("distMat.RData")
-#distMat <- gw.dist(dp.locat = cbind(as.numeric(WPIdata_orig@coords[,1]), as.numeric(WPIdata_orig@coords[,2])))
-#distMat.grid <- gw.dist(dp.locat = cbind(as.numeric(WPIdata_orig@coords[,1]), as.numeric(WPIdata_orig@coords[,2])), rp.locat = s.grid@coords)
-#distMat.sample <-  gw.dist(dp.locat = cbind(as.numeric(WPIdata_sample@coords[,1]), as.numeric(WPIdata_sample@coords[,2])))
+distMat <- gw.dist(dp.locat = cbind(as.numeric(WPIdata_orig@coords[,1]), as.numeric(WPIdata_orig@coords[,2])))
+distMat.grid <- gw.dist(dp.locat = cbind(as.numeric(WPIdata_orig@coords[,1]), as.numeric(WPIdata_orig@coords[,2])), rp.locat = s.grid@coords)
+distMat.sample <-  gw.dist(dp.locat = cbind(as.numeric(WPIdata_sample@coords[,1]), as.numeric(WPIdata_sample@coords[,2])))
 
 
 # collect components

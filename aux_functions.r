@@ -1,20 +1,22 @@
 
-###################### quick mapping choropleths and village plots. from the book R for spatial analysis and mapping
-quick.map <- function(spdf, var, legend.title, main.title ) {
-	x <- spdf@data[,var]
-	cut.vals <- pretty(x)
-	x.cut <- cut(x, cut.vals)
-	cut.levels <- levels(x.cut)
-	cut.band <- match(x.cut, cut.levels)
-	colors <- brewer.pal(length(cut.levels), 'Reds')
-	par(mar=c(1,1,1,1))
-	plot(LaoAdmin0, col='grey85')
-	title(main.title)
-	plot(spdf, add=T, col=colors[cut.band],pch=16)
-	plot(mapBG, col='white', add=T)
-	legend('bottomleft', cut.levels, col=colors,pch=16,bty='n', title=legend.title)
-}
+# ###################### quick mapping choropleths and village plots. from the book "R for spatial analysis and mapping"
+# quick.map <- function(spdf, var, legend.title, main.title ) {
+	# x <- spdf@data[,var]
+	# cut.vals <- pretty(x)
+	# x.cut <- cut(x, cut.vals)
+	# cut.levels <- levels(x.cut)
+	# cut.band <- match(x.cut, cut.levels)
+	# colors <- brewer.pal(length(cut.levels), 'Reds')
+	# par(mar=c(1,1,1,1))
+	# plot(LaoAdmin0, col='grey85')
+	# title(main.title)
+	# plot(spdf, add=T, col=colors[cut.band],pch=16)
+	# plot(mapBG, col='white', add=T)
+	# legend('bottomleft', cut.levels, col=colors,pch=16,bty='n', title=legend.title)
+# }
 
+
+# modified quick.map
 quick.map <- function(variable,colnumber,cols) {
 	shading <- auto.shading(variable, cols = brewer.pal(colnumber,cols))
 	plot(LaoAdmin0, col=NA, border=NA)
@@ -26,16 +28,16 @@ quick.map <- function(variable,colnumber,cols) {
 
 ################### Calculate moran's I from components
 
-componentMoran <- function(x, dMat) {
-	exit <- vector()
+# componentMoran <- function(x, dMat) {
+	# exit <- vector()
 
-	for (i in 1:ncol(x)) {
-		temp <- Moran.I( x[,i],dMat)
-		exit <- rbind(exit, temp)
-	}
-	rownames(exit) <- colnames(x)
-	return(exit)
-}
+	# for (i in 1:ncol(x)) {
+		# temp <- Moran.I( x[,i],dMat)
+		# exit <- rbind(exit, temp)
+	# }
+	# rownames(exit) <- colnames(x)
+	# return(exit)
+# }
 
 componentMoran2 <- function(x, listw) {
 	exit <- vector()
@@ -49,13 +51,6 @@ componentMoran2 <- function(x, listw) {
 	colnames(exit) <- names(temp$estimate)
 	return(exit)
 }
-
-#names <- colnames(WPIdata_sample@data)[9:75]
-#for (i in 1:length(names)) {
-#	newnames[i] <- paste("WPIdata_sample$",names[i],sep="")
-#}
-# newnames <- newnames[-c(53,56,54,12,13,14,15,16,17,18,19,34,35,36,37,38,39,33)]
-# names <- names[-c(53,56,54,12,13,14,15,16,17,18,19,34,35,36,37,38,39,33)]
 
 
 ################### From the book R for spatial analysis and mapping chapter 6: point pattern analysis
@@ -163,7 +158,6 @@ y <- y/max(y)
 rect(breaks[-nB], 0, breaks[-1], y, col="white", ...)
 }
 
-#pairs(WPIscores[,1:6], pch='.', upper.panel = panel.cor, diag.panel = panel.hist, lower.panel = panel.smooth)
 
 # Pause function from http://diego.assencio.com?index=86c137b502561d44b8be02f06d80ee16
 pause = function()
@@ -178,6 +172,8 @@ pause = function()
 }
 
 
+
+# create a lot of plots automatically with fill from continuous variable
 plot.appendix <- function(data) {
 
 	temp <- data.frame(WPIdata$wid, data)
@@ -192,7 +188,7 @@ plot.appendix <- function(data) {
 }
 
 
-
+# create a lot of plots automatically with fill from factorial variable
 plot.appendix.factor <- function(data) {
 
 	temp <- data.frame(WPIdata$wid, data)

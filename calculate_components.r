@@ -49,7 +49,7 @@ rm('WPIresource','WPIaccess','WPIcapacity','WPIuse','WPIenvironment','WPIscore')
 ########################## Calculate geometric mean WPI
 gmeandry <- apply(cbind(WPIdata$dryRES, WPIdata$dryACC, WPIdata$dryCAP, WPIdata$dryUSE, WPIdata$dryENV), 1, Gmean)
 gmeanwet <- apply(cbind(WPIdata$wetRES, WPIdata$wetACC, WPIdata$wetCAP, WPIdata$wetUSE, WPIdata$wetENV), 1, Gmean)
-#gmeanwpi <- apply(cbind(WPIdata$RES, WPIdata$ACC, WPIdata$CAP, WPIdata$USE, WPIdata$ENV), 1, Gmean)
+
 WPIdata$gmeanDryWPI <- gmeandry
 WPIdata$gmeanWetWPI <- gmeanwet
 #WPIdata$gmeanWPI <- gmeanwpi
@@ -58,14 +58,10 @@ rm('gmeandry', 'gmeanwet')
 
 
 # collect components into data.frames
-#WPIcomp <- cbind(WPIdata$WPI,WPIdata$RES,WPIdata$ACC,WPIdata$CAP,WPIdata$USE,WPIdata$ENV)
-#colnames(WPIcomp) <- c('WPI','RES','ACC','CAP','USE','ENV' )
 dryWPIcomp <- as.data.frame(cbind(WPIdata$dryWPI, WPIdata$dryRES,WPIdata$dryACC,WPIdata$dryCAP,WPIdata$dryUSE,WPIdata$dryENV))
-#colnames(dryWPIcomp) <- c('dryWPI','dryRES','dryACC','dryCAP','dryUSE','dryENV' )
 wetWPIcomp <-  as.data.frame(cbind(WPIdata$wetWPI, WPIdata$wetRES,WPIdata$wetACC,WPIdata$wetCAP,WPIdata$wetUSE,WPIdata$wetENV))
-#colnames(wetWPIcomp) <- c('wetWPI','wetRES','wetACC','wetCAP','wetUSE','wetENV' )
 
-# change 0-scores to 0.01 so that geometric mean does not equal to zero
+# change 0-scores to 0.01 so that geometric mean does not result in zero WPI
 temp <- dryWPIcomp[,5]
 temp[temp==0] <- 0.01
 dryWPIcomp[,5] <- temp
@@ -76,9 +72,8 @@ wetWPIcomp[,5] <- temp
 rm('temp')
 
 # collect all components together
-#WPIscores <- cbind(WPIcomp,dryWPIcomp,wetWPIcomp)
 WPIscores <- cbind(dryWPIcomp,wetWPIcomp)
-#scaledScores <- scale(WPIscores)
+
 
 
 
@@ -87,7 +82,7 @@ WPIscores <- cbind(dryWPIcomp,wetWPIcomp)
 
 
 ###########################################
-############## Global PCA weights for components
+############## Calculate WPI with "objective" weights derived from PCA
 ###########################################
 
 # Perform PCA for dry season
@@ -97,15 +92,15 @@ sqroots <- c(  sqrt(abs(PCA$rotation[1,1])) , sqrt(abs(PCA$rotation[2,2])),  sqr
 weights <- sqroots/sum(sqroots)
 
 
-# Total dry WPI score
+# Total dry WPI score - equal weights
 WPIscore <- dryWPIcomp[,2]*weights[1] + dryWPIcomp[,3]*weights[2] + dryWPIcomp[,4]*weights[3] + dryWPIcomp[,5]*weights[4] + dryWPIcomp[,6]*weights[5]
 WPIdata$dryWPIsinglepca <- WPIscore
 
-# total dry WPI gmean score
+# total dry WPI gmean score - geometric mean
 dryWPImult <- (dryWPIcomp[,2]^weights[1] * dryWPIcomp[,3]^weights[2] * dryWPIcomp[,4]^weights[3] * dryWPIcomp[,5]^weights[4] * dryWPIcomp[,6]^weights[5])^(1/sum(weights))
 WPIdata$dryWPIsinglegpca <- dryWPImult
 
-# calculate wet WPI using dry season weights
+# calculate wet WPI using dry season weights - geometric mean
 wetWPImult <- (wetWPIcomp[,2]^weights[1] * wetWPIcomp[,3]^weights[2] * wetWPIcomp[,4]^weights[3] * wetWPIcomp[,5]^weights[4] * wetWPIcomp[,6]^weights[5])^(1/sum(weights))
 WPIdata$wetWPIsingledrygpca <- wetWPImult
 
@@ -137,7 +132,7 @@ globalPCAweights <- cbind(globalPCAweights, weights)
 
 ###################################################
 
-# Perform PCA again for Both season
+# Perform PCA again using data from both seasons
 temp <- rbind(dryWPIcomp[,2:6], wetWPIcomp[,2:6])
 PCA <- prcomp(temp, scale=F) # no scaling - the components are already scaled 0-100
 
@@ -149,7 +144,7 @@ colnames(globalPCAweights) <- c('Dry','Wet','Both')
 rownames(globalPCAweights) <- c('RES','ACC','CAP','USE','ENV')
 
 
-############### calculate WPI with both-weights
+############### calculate WPI with both-season weights
 
 weights <- globalPCAweights[,3]
 # Total dry WPI score
