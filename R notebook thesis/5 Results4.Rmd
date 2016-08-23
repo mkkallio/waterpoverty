@@ -1,0 +1,198 @@
+---
+title: "5 Results"
+output: html_notebook
+---
+
+## 5.4	Mining the Causes of Water Poverty
+The causes of water poverty are explored in this section through three SDM methods; namely cluster analysis, GWPCA and GWR. Reporting on these three methods are di-vided in their own sub-sections, starting with clustering and ending with the regression model.
+
+
+### 5.4.1	Cluster Analysis
+As a first step in cluster analysis, the determination of the number of clusters was at-tempted analytically. For this, R package ”NbClust” (Charrad, et al., 2014) provides a useful tool which includes 30 of tests on the dataset. The package ”proposes the best clustering scheme from the different results obtained by varying all combinations of num-ber of clusters, distance measures, and clustering methods.” NbClust analyses were done using a random sample of 2000 villages (approximately 25% of all villages) due to the heavy computational requirements of the functions.
+
+Running the diagnostic with method k-means for dry season WPI components with spa-tial variables (i.e., running the diagnostic with a collection of variables RES, ACC, CAP, USE, ENV and scaled Latitude and Longitude), yields in a proposition of the best number of clusters to two (when number of clusters the algorithm considered was from two to fifteen). The same diagnostic for wet season components and spatial variables proposes four clusters as the best option. Summary for the results is shown in Table 5.8.
+
+
+**Table 5.8. Number of clusters proposed by the 24 indices used by NbClust package.**
+Best num-ber of clus-ters	Number of indices
+	Dry season	Wet season
+2	11	6
+3	7	6
+4	0	7
+7	0	1
+8	3	0
+9	1	1
+11	0	1
+14	1	0
+15	1	1
+
+
+The number of clusters was also experimented with and visually inspected to validate the analytical solution from NbClust package. It was found that aspatial clustering re-sulted in dissatisfactory results where the villages are assigned to clusters in a seemingly random fashion (in a geographical sense), and therefore aspatial clustering is ruled out. However, the best number of clusters for the spatial clustering, visually, is challenging. In the dry season, four clusters seem to be most useful, as it splits the country along two axes; north-south and rich-poor. For wet season, the challenge is selecting between four and five clusters. Four clusters split the country along the same axes as in the dry season and the two seem very similar to each other. Five clusters add another class, ”the capital area”, which may be useful in determining the local causes of water poverty. However, four clusters are selected for further exploration due to the analytical solution suggesting four, which is also the number selected for dry season clustering. Figure shows the se-lected clustering schemes for dry and wet season. Maps for clustering with k = 3 to 6 are given in Appendix 4.
+
+
+```{r}
+######################
+
+# Prepare required libraries, functions and data
+
+######################
+
+######### Load required libraries 
+library(rgdal)
+library(sp)
+library(GISTools)
+library(spdep)
+library(ggplot2)
+library(gridExtra)
+library(raster)
+library(deldir)
+library(GWmodel)
+library(spgwr)
+library(classInt)
+library(DescTools)
+library(reshape)
+library(cluster)
+library(plotly)
+library(ggiraph)
+
+####################################################################
+####################### Load data 
+####################################################################
+
+load("BG.RData")
+load("clusters.RData")
+```
+
+```{r}
+temp <- clusters$wetS4*10
+temp[temp==30] <- 1
+temp[temp==10] <- 2
+temp[temp==40] <- 3
+temp[temp==20] <- 4
+temp <- data.frame(WPIdata$wid, clusters$dryS4, temp)
+colnames(temp) <- c('id','DryClusters','WetClusters')
+temp2 <- merge(voronoi.f,temp, by='id')
+
+map1 <- ggplot(temp2, aes(x = long, y = lat, fill = factor(DryClusters))) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + scale_fill_manual(values=brewer.pal(12, "Paired")[c(1:4)], name='Cluster', labels=c('Rich North','Rich South','Poor South','Poor North')) + theme_bw()
+map1 <- map1 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('a) Dry season clusters') + theme(rect=element_blank(), line=element_blank(), axis.text.x = element_blank(), axis.text.y=element_blank(),axis.title.x=element_blank(), axis.title.y=element_blank())
+
+map2 <- ggplot(temp2, aes(x = long, y = lat, fill = factor(WetClusters))) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + scale_fill_manual(values=brewer.pal(12, "Paired")[c(5:6,9:10)], name='Cluster', labels=c('Rich North','Rich South','Poor South','Poor North')) + theme_bw()
+map2 <- map2 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('b) Wet season clusters') + theme(rect=element_blank(), line=element_blank(), axis.text.x = element_blank(), axis.text.y=element_blank(),axis.title.x=element_blank(), axis.title.y=element_blank())
+
+multiplot(map1,map2,cols=2)
+
+
+rm(temp)
+
+```
+
+ 
+**Figure 5.27. Selected spatial k-means clustering schemes for a) dry and b) wet season.**
+
+
+The clusters for dry and wet season are very similar to each other. Clusters were given indicative names according to the divisive axes, however it should be noted that not every village in these clusters are poor or rich. The rich cluster follows Mekong River for almost the entire length of it. In addition, major national roads can be clearly seen as long strings of rich villages in the Northern part of the country. Looking at the compo-nents (in Figure 5.28) for each of the clusters, we can see that largest difference between the rich and poor clusters is in Capacity component. The difference is approximately 20-30 index points in the dry season and 40-50 in the wet season. The rich clusters also score better than poor in the Environment component. For others, the picture is more varied; Poor North scores the best in Resources in the dry season and poorly in the wet season. Poor North also has the lowest score in Use and Capacity for both seasons.  
+
+The rich clusters can be divided mainly by differences in Environment and Access, where the North cluster scores considerably better in Access and slightly worse in Envi-ronment, and vice versa for the South. Interestingly, although the southern rich cluster gets a higher average score in the two most important components (RES and ENV) in the wet season, the overall WPI is still less than in the northern counterpart. 
+
+
+Looking at the variables inside the components, following characterizations can be made:
+•	Dry season water availability is the lowest in the Rich North.
+•	Southern clusters score significantly lower in the average length of dry period.
+•	Only Rich North score better than zero (apart from a number of outliers) in Toilet Type.
+•	All Capacity indicators are considerably higher in the rich clusters.
+•	Dry season irrigation is higher in the rich clusters.
+•	Soil degradation is significantly worse in Poor clusters.
+•	Human footprint is higher (lower score) in rich clusters.
+•	North clusters receive less rainfall than the southern ones in the wet season.
+•	Wet season road access is very low in poor clusters.
+
+
+```{r}
+#COMPONENTS
+# dry season
+temp <- data.frame(dryWPIcomp, clusters$dryS4, Provinces)
+colnames(temp) <- c("dryWPI","dryRES", "dryACC", "dryCAP", "dryUSE", "dryENV", "Cluster", "Province") 
+#pairs(temp, pch='.', upper.panel = panel.cor, diag.panel = panel.hist, lower.panel = panel.smooth)
+#title('Dry season')
+temp <- melt(temp[,1:7], id="Cluster")
+p1 <- ggplot(data = temp, aes(variable, value, fill = factor(Cluster))) + geom_boxplot() + theme_bw() + theme(axis.title.x=element_blank(), axis.title.y=element_blank()) + ggtitle('Dry Season') + scale_fill_manual(name="Cluster", labels=c("Rich North", "Rich South", "Poor South","Poor North"),values=brewer.pal(4,"Paired"))# dry season
+
+# Wet season
+# First reorder clusters to same order as dry
+temp <- clusters$wetS4*10
+temp[temp==30] <- 1
+temp[temp==10] <- 2
+temp[temp==40] <- 3
+temp[temp==20] <- 4
+temp <- data.frame(wetWPIcomp, temp, Provinces)
+colnames(temp) <- c("wetWPI","wetRES", "wetACC", "wetCAP", "wetUSE", "wetENV", "Cluster", "Province") 
+#pairs(temp, pch='.', upper.panel = panel.cor, diag.panel = panel.hist, lower.panel = panel.smooth)
+#title('Dry season')
+temp <- melt(temp[,1:7], id="Cluster")
+p2 <- ggplot(data = temp, aes(variable, value, fill = factor(Cluster))) + geom_boxplot() + theme_bw() + theme(axis.title.x=element_blank(), axis.title.y=element_blank()) + ggtitle('Wet Season') + scale_fill_manual(name="Cluster", labels=c("Rich North", "Rich South", "Poor South","Poor North"),values=brewer.pal(10,"Paired")[c(5:6,9:10)])
+
+p1
+p2
+
+```
+
+ 
+**Figure 5.28. Boxplot of WPI components for each cluster in dry and wet season.**
+
+
+From the list above, road access is an interesting find. In the dry season, 25% of the Poor North villages do not have road access, and 16% in the Poor South. In the wet season however, these figures grow to 86% in the North and 79% in the South. Road access increases mean WPI by 7-8 index points, which is approximately as nearly high improvement in the situation as is the difference between wet and dry seasons.
+
+Table 5.9 provides the percentages of villages belonging to rich and poor clusters per province. The same provinces can be classified poor using clustering as could be identi-fied in Section 5.2. Looking at the share of villages in the provinces, Phongsaly, Xekong, Oudomxai and Houaphan all have more than half of villages classified as poor in both seasons. Louangnamtha and Attapeu have more than half of villages in the poor cluster in the dry season. Of these, Phongsaly is identified as overwhelmingly poor, with only 16% and 25% of villages in rich clusters in dry and wet season, respectively. In the other end of the spectrum, Vientiane Capital clusters 100% and Vientiane Province with more than 90% share in the rich side. In addition, Bolikhamxai, Xayabouly and Cham-pasak all are rich with more than 80% share. 
+
+**Table 5.9. Share of villages assigned in rich clusters for each province.**
+Province	% of dry sea-son rich cluster	% of wet sea-son rich cluster	Difference
+Phongsaly	16%	25%	9%
+Xekong	31%	43%	12%
+Oudomxai	38%	43%	5%
+Louangnamtha	39%	55%	16%
+Houaphan	42%	46%	4%
+Attapeu	43%	55%	12%
+Louangphabang	52%	52%	0%
+Bokeo	53%	61%	8%
+Savannakhet	62%	64%	3%
+Xiengkhouang	66%	59%	-7%
+Salavan	72%	72%	0%
+Khammouan	74%	64%	-10%
+Champasak	86%	90%	4%
+Xayabouly	87%	87%	0%
+Bolikhamxai	87%	86%	-1%
+Vientiane	95%	91%	-4%
+Vientiane Capital	100%	100%	0%
+
+
+Khammouan and Xiengkhouang, Bolikhamxai and Vientiane Province are interesting provinces due to being the only provinces in which less villages are clustered to rich classes in the wet season than in the dry season. 
+
+In addition to clustering using the WPI values, clustering was also done for ranks. Ana-lytical solution suggests that, for the dry season three clusters is optimal with 9 out of 23 indices suggesting this (an 8/23 suggesting two clusters). The remaining indices suggest high numbers of over 10 clusters. For the wet season, the highest number of indices sug-gest two clusters (8/23 indices). The rest is more spread out with indices suggesting from three to five clusters. However, visual inspection of the clusters does not support 2-3 cluster scheme. Instead, bearing in mind what has been found earlier in the exploration of WPI, in the dry season six clusters provide a cluster division that supports earlier findings. For wet season, five clusters seem to give clusters that approximately follows the earlier findings. Lower numbers of clusters break the country in two or three uniform regions that seem to be driven by location only, not by components. The higher number of clusters was selected in order to break the area in smaller pieces to create a more de-tailed view on the causes of water poverty. The selected cluster schemes are presented in Figure 5.29.
+
+
+```{r}
+######  GGPLOT2
+temp <- data.frame(WPIdata$wid, clusters.rank$dryS5, clusters.rank$wetS4)
+colnames(temp) <- c('id','DryClusters','WetClusters')
+temp2 <- merge(voronoi.f,temp, by='id')
+
+map1 <- ggplot(temp2, aes(x = long, y = lat, fill = factor(DryClusters))) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + scale_fill_manual(values=brewer.pal(12, "Paired")[c(1:4,7:8)], name='Cluster', labels=c('Mekong South','Poor South','Northeast','Poor North','Bolaven','Vientiane')) + theme_bw()
+map1 <- map1 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('a) Rank clusters - Dry season') + theme(rect=element_blank(), line=element_blank(), axis.text.x = element_blank(), axis.text.y=element_blank(),axis.title.x=element_blank(), axis.title.y=element_blank())
+
+map2 <- ggplot(temp2, aes(x = long, y = lat, fill = factor(WetClusters))) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + scale_fill_manual(values=brewer.pal(12, "Paired")[c(5:6,9:11)], name='Cluster', labels=c('Rich North','Rich South','Central','Poor South','Poor North')) + theme_bw()
+map2 <- map2 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('b) Rank clusters - Wet season') + theme(rect=element_blank(), line=element_blank(), axis.text.x = element_blank(), axis.text.y=element_blank(),axis.title.x=element_blank(), axis.title.y=element_blank())
+
+multiplot(map1,map2,cols=2)
+
+rm(map1,map2,temp,temp2)
+
+```
+
+
+ 
+**Figure 5.29. Selected Rank based clusters for a) dry and b) wet season.**
+
+
+Rank clustering provides little extra information over the clustering with the WPI val-ues. The area around the Capital (Vientiane cluster in the dry season and Rich North cluster in the wet season) scores the highest in both seasons, followed by the clusters Bolaven plateau (dry season) and Rich South (wet season). In addition, it is clear that the cluster named Poor South (both seasons) are the most problematic of all the clusters. The major difference is in Capacity, as was found in the WPI clustering.
+
+As a summary, cluster analysis suggests that the major difference between rich and poor areas comes from the Capacity component. Specifically, the water-rich and water-poor very strongly correlates with wet season road access. 

@@ -1,0 +1,135 @@
+---
+title: "2 Background"
+output:
+  html_notebook: default
+  html_document: default
+---
+
+The background chapter provides basic introduction to Lao PDR to set a context to the geographic area of this study. Following that, an introduction to Water Poverty Index (WPI) is given to familiarize the reader to the main concept of this study. Finally, Water poverty is examined through previous studies in Lao PDR.
+
+## 2.1	Introduction to Lao PDR
+Lao People’s Democratic Republic (Laos for the remainder of the paper) is a land locked country in Mainland Southeast Asia located between latitudes 13o-22.5o North and longitudes 100o and 108o East (WGS84. However, UTM Zone 48N (EPSG:32648) is the coordinate system used in the thesis). It is bordered by Cambodia to the south, Thailand to the west, Myanmar in the northwest, China to the north and Viet Nam to the east. The total land area of Laos is 236 800 km2 with 80% of its land surface classified as mountains (see Figure 1). Cultivable land is considered to account for only 25% of the total land surface. The lowlands of Laos accommodate 56% of the total population of approximately 6.8 million, which is young; half of the population is under the age of 22 with life expectancy of 65.8 years. Laotians are also rural; current estimates place the share of rural population to 68-71%.   (United Nations in Lao PDR, 2015)
+
+```{r, message = FALSE}
+######################
+
+# Prepare required libraries, functions and data
+
+######################
+
+######### Load required libraries 
+library(rgdal)
+library(sp)
+library(GISTools)
+library(spdep)
+library(ggplot2)
+library(gridExtra)
+library(raster)
+library(deldir)
+library(GWmodel)
+library(spgwr)
+library(classInt)
+library(DescTools)
+library(reshape)
+library(cluster)
+library(plotly)
+library(ggiraph)
+
+####################################################################
+####################### Load data 
+####################################################################
+
+load("BG.RData")
+
+
+
+```
+
+```{r, fig.caption='Figure 1. Hillshaded Digital Elevation Map of Laos.'}
+
+########################################################################
+############### Description of Laos
+#######################################################################
+
+# Plot DEM of Laos
+alt <- getData('alt', country='LAO')
+slope <- terrain(alt, opt='slope')
+aspect <- terrain(alt,opt='aspect')
+hill <- hillShade(slope,aspect,40,270)
+hill <- data.frame(rasterToPoints(hill))
+alt <- data.frame(rasterToPoints(alt))
+
+# ggplot2
+ggplot(hill,aes(x=x,y=y))+
+    geom_raster(data=alt,aes(fill=LAO_msk_alt),alpha=0.75)+
+    geom_raster(aes(alpha=1-layer),fill="gray20")+
+    scale_alpha(guide=FALSE,range = c(0,1.00))+
+    scale_fill_gradientn(name="Altitude",colours = terrain.colors(100))+
+    theme_minimal()+coord_equal()+xlab("Longitude")+ylab("Latitude")+ggtitle('Digital Elevation Map of Laos')
+
+#remove extra variables
+rm('alt','slope','aspect','hill')
+
+
+```
+
+**Figure 2.1. Hillshaded Digital Elevation Map of Laos.**
+
+Currently, Laos is divided into 18 provinces after Xaysomboun Special Region was approved as a province in 2013 (however, this thesis uses the previous province division where Xaysomboun is a part of Vientiane Province because all used census data was collected prior to 2013). The provinces (shown in Figure 2) in turn are divided into 145 districts.
+
+
+![](Kuvat/fig2-2.png)
+
+**Figure 2.2. Province and district areas used in this thesis (pre-2013) of Laos.**
+
+Laos is currently considered a Least Developed Country, however the government aims to graduate from the status in the 2020s. Economic growth in the current decade has been rapid and steady at approximately 8%. A majority of the growth comes from the natural resources industry, namely mining sector, hydropower construction and forestry industry, and they contribute 18% of the entire GDP of Laos. (United Nations in Lao PDR, 2015) In fact, 72 new major hydropower dams are planned or already under construction, nine of which are located in the Mekong River mainstream (International Rivers, 2015). 
+
+Laos is located in the Mekong River Basin, one of the world’s great rivers, nearly entirely. Mekong’s source lies in the Tibet in the Himalayas and flows through China, Myanmar, Thailand, Laos, Cambodia and Vietnam into the South China Sea. Overall, it spans for almost 4350km and measured by discharge, it is the 8th largest river in the world. River basins in Laos contribute the highest volumes of all riparian countries; 35% in the dry and up to 60% in the wet season of the entire annual discharge (Mekong River Commission, 2007). Due to its location, Mekong’s flow is influenced by the Southwest Monsoon which results in very large difference between wet and dry season flow. In fact, on average the wet season contributes over 85% of the annual precipitation. In Lao PDR, annual precipitation varies from less than 1000mm near Louang Prabang to more than 3000mm in some mountainous areas. (Babel & Wahid, 2009; Mekong River Commission, 2011)
+
+Human impacts on the water resources are relatively low. Water pollution is not alarmingly high except in the Delta area in Vietnam, albeit local hotspots of water pollution can be found. (Babel & Wahid, 2009; Mekong River Commission, 2007) In addition, only 0.9% of the discharge is withdrawn for utilization in Lao PDR. Agriculture is the main water user in the entire Mekong River Basin, with up to 99% of withdrawn water used in agriculture. Despite a high share of agriculture in water use, 90% of rice crops in Laos are rainfed. (Babel & Wahid, 2009)
+
+## 2.2	Water Poverty Index
+Water Poverty Index (WPI) has been developed to answer to the need of incorporating other factors to the prevailing convention (at least, at the time of development) of thinking water from a purely resource based point-of-view. WPI is intended as a holistic policy tool which combines physical (the resource-based view) with social sciences to better address the requirements for alleviating water-related poverty. It is known that, without sufficient water (in areas experiencing water poverty), any poverty alleviation measures are likely to be unsuccessful.  (Sullivan, 2002)
+
+There are several ways a person may be water poor. One may not have enough water for basic needs because it is not available, or the access to water may be limited because it is only available at a distance. Water poverty may also be due to income poverty; a person not being able to afford the price of safe water.  (Sullivan, 2002; Lawrence, et al., 2002)
+
+Sullivan (2002) lists several pressing needs for a holistic view on water. Increase in the living standards of populace is known to increase water consumption. WPI helps in identifying the regions and communities where water is needed, and to aid in the equitable distribution of the resource. Another important need for WPI is the link between poverty and water. Poverty in general is a topic which has been researched from many points of views, however, though many research papers touch water, there are not many attempts that link poverty to water explicitly.
+
+The key issues in constructing a meaningful WPI are (as in any other composite index) are the choice of components, sources of data, choice of formula and the choice of a reference period. The problem is quantifying a phenomenon that cannot be directly measured (who is water poor, who is not?). In addition, the choice of the scale of analysis is important, and all other choices should reflect the scale. Water environment is heterogenous by nature with water availability changing dramatically over short distances. Access to the same water source may also vary from community to community, or even within family groups. Such inherent variation in the domain of water poverty adds to the challenge in presenting it as an index. A country level WPI may tell nothing about the regional differences in water poverty, and a regional index may not be able to represent both rural and urban population. (Sullivan, 2002)
+
+Sullivan’s original paper (2002) describes several ways how WPI could be calculated.  However, one of the earliest applications of WPI developed a methodology similar to Human Development Index (HDI), dividing it into five distinct components: Resource, Access, Capacity, Use and Environment.  (Lawrence, et al., 2002) Each of the components are further broken into sub-components.
+
+Resources (RES) attempts to measure the availability of water resource, taking into account both, the internal water resource as well as the water inflow from an external source. Access (ACC) measures not only the access to safe water for drinking, cooking and sanitation, but also for agricultural and other uses. Capcacity (CAP) involves education, health, income and the ability to influence the managing of the shared water resource. Use (USE) involves domestic, agricultural and other water use. Environment (ENV) includes the environmental factors which are important in relation to the capacity for the community’s (or country’s) ability to utilize the resource.  (Lawrence, et al., 2002)
+
+
+### 2.2.1	Water Poverty Research in Lao PDR
+
+Water Poverty Index has not been applied, according to the author’s knowledge, to Lao PDR except on a whole country basis in international comparisons. Lawrence et al (2002) found that Lao PDR had a WPI of 58.5, which places it in the middle range among the countries of the world. As a comparison, the least and most water poor country was found to be Finland with a score of 79.9, and Ethiopia with a score of 34.0. The study used variables presented in Table 1 to calculate the individual components. 
+
+Individual component scores for Laos (from a maximum of 20) were 13.9 for Resources, 5.4 for Access, 12.0 for Capacity, 16.8 for Use and 10.4 for Environment. According to this study, biggest problems regarding water poverty in Lao PDR is in Access component and the best situation in Use component. (Lawrence, et al., 2002)
+
+However, despite water poverty per se has not been widely studied, water-related issues have been widely researched – namely poverty and agricultural issues. International Fund for Agricultural Development (2014) places the current (2010) poverty rate at 27.6%, mentioning that Laos is one of the poorest and least developed countries in the region. As a reference, incidence of poverty in the main dataset of this study (Population Census 2005) is approximately 35%. Poverty (and especially water-related poverty) causes malnutrition with 44% of children under the age of 5 being chronically malnourished. Farming is mainly practised for subsistence with farmers having poor conditions for economic production of crops. 
+
+The report by IFAD (2014) places majority of the poor population in the mountainous and rural areas. 70% of Population in rural Laos lack access to sanitation (Babel & Wahid, 2009) and are geographically and istitutionally isolated. They are isolated from markets, education and health services and administrative services. (International Fund for Agricultural Development, 2014)
+
+
+Table 1. Variables used by Lawrence et al (2002) to calculate an international comparison of WPI.
+WPI Component	Data Used
+Resources	Internal Freshwater Flows
+	External Inflows
+	Population
+Access	% of population with access to clean water
+	% of population with access to sanitation
+	% of population with access to irrigation adjusted by per capita water resources
+Capacity	ppp per capita income
+	Under-five mortality rates
+	Education enrolment rates
+	Gini coefficients of income distribution
+Use	Domestic water use in litres per day
+	Share of water use by industry and agriculture adjusted by the sector's share of GDP
+Environment	Indices of:
+	•	Water quality
+	•	Water stress
+	•	Environmental regulation and management
+	•	Informational capacity
+	•	Biodiversity based on threatened species

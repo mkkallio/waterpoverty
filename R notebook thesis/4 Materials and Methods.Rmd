@@ -1,0 +1,178 @@
+---
+title: "4 Materials and Methods"
+output: html_notebook
+---
+
+The fourth chapter starts with a description of the datasets and how they were used in the work. Following, a detailed description of the choice of variables and methods to calculate the Water Poverty Index is given. Third, the employed EDA and SDM methodology is explained along with the rationale of why the selected methods were used. Fourth, the tools to implement the selected methods are given.
+
+## 4.1 Data and Data Sources 
+The data used in this thesis is mainly derived from household studies conducted by the Lao Statistics Bureau. The two main sources are Population and Housing Census 2005 (Lao Statistics Bureau, 2005) and Agricultural Census 2010/2011 (Lao Statistics Bureau, 2011). Both datasets are household level surveys conducted in face-to-face interviews of household heads. Some indicators are found from both datasets, and in these cases, the newer one was used. The datasets are available after registeration in the Lao DECIDE web service, http://www.decide.la/. In addition to the census data, a number of other datasets used are listed below:
+
+*	SEDAC Last of the Wild v2 is used in WPI Environment component to account for the human environment. Global Human Footprint (v2, 1995-2004) is an estimate of the anthropogenic influence created from nine global datasets: human population pressure (population density), human land use and infrastructure (built-up areas, nighttime lights, land use/land cover), and human access (coastlines, roads, railroads, navigable rivers). (Wildlife Conservation Society - WCS; Center for International Earth Science Information Network - CIESIN - Columbia University, 2005)
+*	Aqueduct Global Maps 2.1 (Gassert, et al., 2014) was used in the WPI Environment component to represent the state of the water resource. Specifically, the categories of threatened amphibians from the dataset was employd for this purpose. 
+*	For modelling of water resources in Laos, baseline temperature and precipitation from the study of Lauri et al (2014) was used. The data is collected by Mekong River Commission and the national weather services of the MRC member states. 
+*	Water consumption data was used for data mining purposes. The data used was Total water consumption from the Global Water System Project Digital Water Atlas, which is based on the Water GAP model version 2.1d. The spatial resolution of the dataset is 0.5o. (GWSP Digital Water Atlas, 2008c) In addition, Irrigation water consumption (GWSP Digital Water Atlas, 2008b) and Domestic water consumption (GWSP Digital Water Atlas, 2008a) was used for the same purpose.
+*	Harmonized World Soil Database (FAO/IIASA/ISRIC/ISSCAS/JRC, 2012) was used for data mining purposes. Specifically, elevation and slope classes were utilized from the dataset.
+
+The use of the above datasets is explained in detail in the following sections under Developing the Water Poverty Index and Analysis Methodology.
+
+
+## 4.2 Developing the Water Poverty Index
+
+The datasets described in section 3.1 were used to calculate WPI separately for dry and wet seasons. The variables used are the same for both indices to allow easy comparison, however, their application differs slightly for what is relevant for the respective season. The variables used to calculate WPI are summarized in Table 4.1. It is good to note here what these variable selections represent specifically in this study. Resources represents water availability in a relatively straightforward manner. Access on the other hand describes the infrastructure present in the villages to make use of the available water. Capacity represents the ability of the villages to manage their water in a local context – it does not include institutional capacity. Use on the other hand describes the extent to which the water resource is being used and the dependency of the population on its availability. Lastly, Environment measures a mixture of variables from the state of water and soil and disaster occurrence to land use. 
+
+
+Table 4.1. Summary of the variables and scoring used for calculating the components.
+ 
+
+
+A more detailed description of the variables as well as their processing is presented in the following sub-sections for each component.
+
+### 4.2.1 Resources Index
+Three variables were used to calculate the resources component. Surface water availability were simulated using a distributed physical hydrological model developed by the Environmental Impact Assessment Finland Ltd (Ympäristövaikutusten Arviointi Oy). The main model used is comprises of the entire Mekong catchment in 5km resolution grid cells. Since the entire Laos is not contained in the Mekong Basin, three additional small catchments in northeast Laos were modelled with the same resolution to cover the entire country with model results. The model description and information on calibration is given in Appendix 1.
+
+To include the effects of drought in the dry season, the length of the period with no rain (precipitation less than 1mm) in the dry season was calculated. For the WPI calculation, the average longest consecutive dry streak for the historical record (the length of the record varies from station to station) was used and interpolated to include the entire Laos. Surface water availability was scored according to Falkenmark indicator for water scarcity. According to Falkenmark et al (1989), water availability below 1700 m3 per capita per year can be considered water scarce. Absolute scarcity occurs when less than 500 m3 of water is available per capita per year. These two limits were used so that score 100 was applied when water availability was above the scarcity limit (1700 m3 per capita per year), and score 0 was applied when less than absolute water scarcity limit (500 m3 per capita per year) was available. Values in between were interpolated using the two limits. Scoring amount of precipitation was applied in a relative manner so that the maximum daily average precipitation in the wet season had a score of 100, and all other values scored relative to that. Average maximum duration of drought was calculated with an algorithm that counts the days in dry season with precipitation less than one millimetre, takes the maximum value for each dry season and averages them. Scoring was applied so that the best score was given to the shortest dry streak in the dry season, and 0 score to the longest dry period.
+ 
+
+### 4.2.2 Access Index
+The Access component were calculated using three variables; irrigation, drinking water source and toilet type. Irrigation and drinking water source are presented in the source data as Boolean values for different irrigation techniques and drinking water sources in the villages in question. Irrigation data is divided into eight categories;
+
+*	Permanent weir
+*	Reservoir
+*	Pump
+*	Dyke
+*	Temporary weir
+*	Gabion
+*	Other, and
+*	Not specified
+
+The different irrigation techniques were summed together for each village so that permanent weir, reservoir, pump and dyke were given double weight. The score was then calculated using a relative method where the village with the highest value was assigned with a score of 100, and the rest scored relative to this. A similar procedure was applied for the drinking water source, which is divided in six categories:
+
+*	Piped water
+*	Protected well
+*	Unprotected well
+*	Surface water
+*	Rain water
+*	Other
+
+Different to the irrigation calculation, some categories were given a positive value (Piped and protected and unprotected well) while others were given a negative value (surface water, rain water and other). The values were summed for each village, and a relative score was taken in the same way as in case of Irrigation. The third variable in ACC is Toilet type, which is divided into four categories in the source data: Modern, normal, other and no toilet. These categories were scored 100, 66, 33 and 0 respectively.
+
+
+### 4.2.3 Capacity Index
+Capacity component is calculated using four variables; sum of travel time to district and province capitals, road access to village (varies according to season), share of literate population from total population and incidence of poverty. The variables were chosen to reflect the ability of the village population to influence on the management of the water resource they are dependent on. 
+
+Literacy rate and incidence of poverty are presented in the source data as percentage values, and therefore they were used as they are for the index calculation (in the case of incidence of poverty, the score is 100-poverty rate). Travel time to district and provincial capital were summed together and scoring was made so that the village with shortest combined value got a score of 100 and villages with travel time of more than 600 minutes (10 hours) received a score of 0. The travel times in between were interpolated between these values. Road access was included in addition to travel time to represent additional challenges in reaching the administrative capitals from the village. The data set divided road access in to three categories; access in both seasons, access in dry season only and no road access at all. A village with road access got a score of 100 and a village with no road access was given a score of 0. Different scores were calculated for dry and wet seasons, as in some villages road access was not year round.
+
+
+### 4.2.4 Use Index
+Component of water use is calculated using three indirect variables due to direct water use data not being available. Share of irrigated cropland from the total cropland of the village is used as an indicator of the extent of used irrigation potential. Source data provides seasonal differences and therefore the irrigation scoring is different for the seasons. Second, agricultural area per person is used to indicate whether sufficient crop is produced. Third, the share of population that are dependent on either aqua- or agriculture is used to represent the population whose livelihood is dependent on water use capabilities and thus, are more vulnerable to water poverty. Scoring for the variables were applied differently for each variable. The first variable, share of irrigated area was used as it is given in the dataset (percentage). Agricultural area per person was scored so that a field area of more than 1 ha per capita received a score of 100, and less than 0.1 ha received score 0. The third variable, share of population dependent on either agri- or aquaculture were presented in the dataset as percentages. The percentages were summed together and scoring was applied so that villages with zero percent dependent on either agri- or aquaculture received the best score, 100, while the worst score, zero, was given to villages with 100% dependency on either one.  
+
+
+### 4.2.5 Environment Index
+The final component, Environment, is calculated using four variables; threatened amphibians to represent the general state of the water environment, disaster occurrence to represent the extremity of the climate and conditions surrounding the village, the state of soil degradation and fourthly, Human Footprint. Threatened amphibians was presented in the source data in four different categories:
+
+*	Low, 0%
+*	Low to medium, 1-5%
+*	Medium to high, 5-15%, and
+*	High, 15-35% of amphibians threatened.
+
+Scoring was applied so that a score of 100 was given to low category, 66 to low-to-medium, 33 to medium-to-high and zero score to high category. Soil degradation was likewise divided into four categories:
+
+*	No degradation
+*	Light
+*	Moderate, and
+*	Severe degradation.
+
+The scoring of soil degradation was applied in an identical way to the threatened amphibians. The third environmental variable, disaster, was divided into several subcategories in the source dataset. In addition to disaster occurrence in general, frequent disasters are represented in their own category (e.g. if flooding occurs frequently (every 1-2 years) in a village, the dataset value is true for both flood and frequent flood). Disasters were calculated separately for dry and wet seasons due to the nature of the disasters. It is assumed that flooding disasters do not occur during dry seasons, and that drought disasters are endemic to dry season. In addition, landslides are heavily related to strong rainfall events and due to that, they are not considered in the case of dry season. Table 4.2 presents all the disaster categories and whether they are used in dry or wet season.
+
+The disasters were scored in a similar way as irrigation and drinking water source variables in the Access component. The occurrences were counted together, and compared to the situation where all disasters would be occurring frequently. 
+
+Table 4.2. Disaster types and the index calculations they are used for.
+Disaster type	Used in
+Flood	Wet season
+Landslide	Wet season
+Drought	Dry season
+Pests	Both seasons
+Other	Both seasons
+Not specified	Both seasons
+
+
+### 4.2.6 Calculating the Water Poverty Index
+One of the strengths of the WPI is the ease of its application. The simplest and a common way of calculating the index is to calculate an average of the components, and to scale the sub-component values to minimum and maximum of the component range. Alternatively, one can use weighted average as shown in Equation 9
+
+WPI=(∑▒〖C_i w_i 〗)/(∑▒w_i )			(9)
+
+where Ci is the component in question and wi is the weight assigned for a specific component, and scaling with Equation 10
+
+(x_i-x_min)/(x_max-x_min )				(10)
+
+where xi is the component x value i being scaled. (Lawrence, et al., 2002) However, research has shown that additive calculation of the index is not optimal due to an effect called full compensation, and therefore one should instead use multiplicative adding (geometric mean) (van der Vywer, 2013; Garriga & Foguet, 2010). 
+
+Weighting of the components has been a matter of discussion, and Sullivan et al (2006) suggest that researchers should not emphasize one component over the others because it is always a political decision. The problem of subjective weighting of the components has been addressed by Jemmali and Matoussi (2013), who used objective weighting by Principal Component Analysis (PCA). PCA is a traditional multivariate statistical method which re-projects multivariate data into principal components (PC) which represent variation in the data. The first principal component represents largest variation in the data, the second principal component represents the largest variation that is not described by the first component, and so on. The principal components can be used to derive weights for variables using Equation 11
+
+w_i=∑_(k=1)^2▒〖PC_k  √(lambda_k )/(∑_k▒√(lambda_k ))  〗			(11)
+
+where wi is the weight assigned for ith component, PCk is the characteristic vector (eigenvector) of the kth principal component and lambdak is the eigenvalue of kth principal component. WPI can then be objectively calculated using equation 12
+
+WPI= ∏_(i=RES,ACC,CAP,USE,ENV)▒X_i^(w_i )  		(12)
+
+where Xi is the value of component i. (Jemmali & Matoussi, 2013)
+
+
+## 4.3 Analysis Methodology
+To answer the research questions presented in the Introduction chapter, a methodology specific for this study was developed. The methodology is based on the presented concepts of Exploratory (Spatial) Data Analysis and Spatial Data Mining; no prior hypotheses were developed prior to application and the data was approached in many different angles. 
+
+The methods employed, however, were selected specifically to answer the research questions. As a reminder, the research questions are: 
+
+1.	Are there distinct differences between areas in their water poverty?
+2.	Are there distinct spatio-temporal differences in water poverty?
+3.	What are the causes of water poverty in Laos?
+  a.	Do the causes differ across space and seasons?
+
+The methods to answer the research question are summarized in Figure 4.1. The approach is split in two; research questions 1 and 2 use the same methodology, while research question 3 uses additional methods from the SDM domain which does not concern the first two. However, the distinction is not strict; both “branches” provide complementary information to all of the research questions
+
+The process to answer the first two research questions start with an exploration of the selected variables used to calculate the WPI. This step is an important one due to limitations in using composite indices to explain complex phenomena. (Lawrence, et al., 2002) Univariate global distributions as well as multivariate distributions of the variables are explored in addition to their spatial autocorrelations. Once the initial exploration is done, WPI is calculated for both, dry and wet seasons separately as a tool to assess the temporal dimension. The resulting two WPI datasets are then explored in detail using multivariate ESDA methods. This phase of exploration also includes the comparison of the two WPI’s to determine whether the two seasons differ significantly from each other. Spatial dimension in the two WPI’s is evaluated in two ways: First through GWSS in order to address the problem of MAUP described in Section 3.1.3. Second, WPI is explored in the context of Provinces in order to make interpretation easier and to aid in decision making in actions to alleviate water-related poverty in Laos. Finally, cluster analysis is performed on both seasons in order to make clear distinction between areas of different properties of the WPI components and their seasonal differences. Once the results of ESDA are formulated, they are tested through confirmatory data analysis. If the result is not satisfactory, ESDA is continued until acceptable results are found.
+
+The methods to answer the causes employ SDM methods (although, it should be noted that this is an artificial distinction; SDM methods are also employed in answering the first two research questions as well as ESDA methods are employed in answering the third one). The used methods are clustering, GWR and GWPCA. Spatial clustering divides the area into distinct clusters which can be explored to answer characteristic drivers of water poverty in each cluster area. GWR is employed here to seek the variables which can be used to explain the computed WPI’s. Here, additional variables are used in addition to the processed variables used for calculation of the indices, and more specifically, to investigate the local drivers. GWPCA on the other hand is used to explore the local variation in the attribute space. The results from the SDM procedure is subjected to statistical testing. As with the path to asnwer the first two research questions, the SDM process is continued until satisfactory results are found.
+
+
+ 
+![](Kuvat/fig4-1.png)
+
+**Figure 4.1. The exploratory method used in the study.**
+
+
+GWSS is used to get a local statistical view on the WPI components. The use of GWSS allows for addressing Edge Effects by using an adaptive bandwidth of 400 nearest neighbours (this is close to the optimal bandwidth of GWR) which accounts for approximately a sample of 5% from the total population. Additionally, using a local average of 400 villages addresses the problem of village level uncertainty reported in Epprecht et al (2008); the number of villages used takes the average to approximately provincial level, but evades the MAUP of crisp provincial borders. Using an adaptive bandwidth also ensures that the sample size in different locations does not vary.
+
+Clustering in this study consists of several steps. The first one is to determine an optimal number of clusters via visual inspection and analytical solutions. Once the number of clusters is selected, spatial k-means clustering is applied to the WPI data supplemented with coordinates standardized to the WPI score range (0-100). In addition to the scores, spatial k-means clustering is applied for rank data to get an alternative view on the process. The clusters are then subjected to several EDA methods to study their characteristics, both in a state-wide and provincial perspectives. 
+
+Using GWR involves several steps to be taken; model and bandwidth selection, collinearity diagnostics, and statistical testing of the results. Model selection in this study is done using a step-wise selection using cross-validation (CV). The algorithm starts by calibrating a GWR model with a single independent variable. CV score is recorded for each variable, and the variable which produces the smallest CV score is selected. Then, the algorithm introduces the remaining independent variables one-by-one in addition to the already selected variable. These steps are repeated until CV score does not significantly improve. The input for the algorithm is the original values (i.e. not values processed to the scores) and consisted of all variables used to calculate WPI components, added with a number of additional, relevant variables (all of these are listed in Appendix 6). The model selection is performed with the same bandwidth as GWSS (400 Nearest Neighbours), and once the selection is done, bandwidth is optimised using CV. Basic and robust variants of GWR are used to estimate the regression coefficients to mine information about the local importance of the explanatory variables. The model is evaluated using local t-statistic, local R2 and Monte Carlo simulation, as suggested by Demsar et al (2008) and by Brunsdon et al (1998). In addition, the three F statistics outlined in Leung et al (2000) are calculated.  Local Multicollinearity is addressed in the vein of Wheeler and Tiefelsdorf (2005) and Wheeler (2006) suggestions.
+
+GWPCA is used in the SDM process to gain additional information on the local differences in WPI components. It is run with the same bandwidth selection as GWSS and GWR step-wise model selection to ease interpretation in relation to the other methods.  The analysis follows the recommendations in Demsar et al (2013), Charlton et al (2010) and Lloyd (2010). Spatial variation of the principal components is tested using Monte Carlo procedure.
+
+All in all, the methodology is a combination of visual and computational exploratory methods with an emphasis on cartographic visualization and spatial variability.
+
+
+## 4.4 Implementation Tools
+Two main tools were used to implement the methodology outlined in the previous section. First, data manipulation and data collection were done using QGIS version Essen, 2.14 (QGIS Development Team, 2016). The variables used were collected to points representing the villages used in the study; in the case of raster data (modelling results, water consumption, elevation and slope class), the raster cell value in which the village point is taken as representative to the village. The raster data is resampled to 5km resolution prior to assigning it to the village. The dataset is then exported to a shapefile for analysis in R.
+
+R is a free and open source statistical programming language (or programming environment) (R Core Team, 2016). R can be extended via user contributed “packages”, which extend the functionality of base R. Currently (17th July 2016) there are 8775 packages available through the Comprehensive R Archive Network (CRAN), which is the largest repository for R packages. A fair number of different packages are utilized in the analysis work in this study. A list of the most important used packages is provided below (however, the list is not complete – packages are often linked to other ones. Only the main packages are included in the list).
+
+
+*	Analysis
+	  + Base R (R Core Team, 2016) for basic statistics and functionality.
+	  + sp (Bivand, et al., 2013) for handling spatial data in R.
+	  + spdep (Bivand & Piras, 2015) for calculating Moran’s I.
+	  + GWmodel (Gollini, et al., 2015) to perform GWSS, GWR and GWPCA.
+	  + spgwr (Bivand & Yu, 2015) for an alternative implementation of GWR.
+	  + cluster (Maechler, et al., 2016) for clustering.
+	  + NbClust (Charrad, et al., 2014) for analytical choice of the number of clusters.
+*	Visualization
+	  + ggplot2 (Wickham, 2009) to create majority of the illustrations.
+	  + plotly (Sievert, et al., 2016) and ggiraph (Gohel, 2016) to create interactive versions of ggplot2 illustrations.
+	  + GISTools (Brunsdon & Chen, 2014) for some of the maps.
+
+
+The source code for all the analyses and data manipulations is published under the author’s personal website in http://markokallio.fi/waterpoverty as well as under a GitHub repository mkkallio/waterpoverty. An interactive version of the study can also be found in the author’s website. 
+
+

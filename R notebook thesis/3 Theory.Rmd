@@ -1,0 +1,239 @@
+---
+title: "3 Theory"
+output: html_notebook
+---
+
+
+The third chapter of the thesis introduces the reader to spatial data and why a lot of emphasis is put on location. First, spatial data is briefly introduced including a description of its special nature and issues related to that. Once the special nature of spatial data is covered, theory about Exploratory Data Analysis (EDA), which is the main approach of the investigative work conducted in this work, is discussed. In fact, spatial data analysis is descriptive and exploratory in their nature (O'Sullivan & Unwin, 2010). Finally, the principles of selected Data Mining (DM) methods and their spatial variants are introduced as an extension to the classical EDA. 
+
+
+## 3.1 Spatial is Special
+The term spatial data includes all data that have a spatial component; the data has connection to a location on Earth. Spatial data can be divided among two two main types; objects and fields. An object is a digital representation of an entity, a real world phenomenon that ”is not subdivided into phenomena of the same kind” (Zhang & Goodchild, 2003, p. 31). A feature is a defined entity and its object representation. Objects are represented by vectors, which are collections of location coordinates (either a point, a line or an area) together with attributes, specific qualities or quantities of the entity that is represented by the object. The boudaries of objects are crisp, meaning that the object contains information that is within the borders of the object, but tells nothing of the outside. However, in the real world, objects seldom are crips with the exception of man-made objects (e.g. houses, roads or fences which be precisely defined, or abstract entities such as cadastres). This is a difference between a ”smooth” field and a crisp object. A field can be represented by a mathematical function of space and time (for example in the case of gravitational or magnetic fields). However, a mathematical representation may not always be possible or necessary. Fields can also be represented by irregular or regular points, rasters, area objects in the form of a triangulated irregular network (non-overlapping triangles) or contours as in topographic maps (e.g. elevation of land surface or depth of water). A raster is a data model of a field which includes equal size cells which are arranged in rows and columns. Each cell (a pixel; the smallest non-divisable unit of the raster) contains a single or multiple values for attributes as well as location coordinates. Rasters are often used due to the ease of processing them. An illustration of the main types of objects  and a raster representation of a fied are shown in Figure 3.1. (O'Sullivan & Unwin, 2010; Zhang & Goodchild, 2003) 
+
+In addition to defining spatial data in the form of coordinates, position of an entity can be expressed with its relationship with other entities. Measures if spatial relationships are distance, direction, proximity, adjacency and connectivity. Several distance metrics exist, but most commonly Euclidean distance is used: e.g. the length of a connecting line. Direction also refers to the connecting line. Proximity of an entity is defined by a circle or another shape that is drawn around the object. These three are metric relationships; they can be measured and quantified. Adjacency and connectivity on the other hand are topological relationships: They remain unchanged when the spatial reference is altered. Adjacency is defined e.g. by a commong line between areas, shared line or face (volumes) or in the case of lines, common end points. Connectivity is similar to adjacency and proximity, however, the two connected entities do not need to touch each other directly (there can be intermediate objects) nor does it need to be within a certain distance as with proximity. A natural example is a road or a river network: A river delta is connected to the all the streams that flow to the sea through the same outlet. Similarly, a road in Foggia, Italy is connected to a small residential street in Helsinki, Finland through a complex network that spans through Europe. (O'Sullivan & Unwin, 2010)
+
+The data type and model appropriate to represent the real world entity is dependent on scale. (O'Sullivan & Unwin, 2010) An illustrative example a village for which there are several options. First, one can represent each individual building in a village using area features. When looking at the village in a smaller scale, the buildings shrink and a point becomes the most convenient representation. Similarly, one can represent the village as a polygon which delimits the areal extent of it. On a smaller scale, a point will the most efficient object type.
+
+
+
+![](Kuvat/fig3-1.png)
+
+**Figure 3.1. Illustration of different spatial data types. (O'Sullivan & Unwin, 2010)**
+
+
+### 3.1.1 Spatio-Temporality
+Most spatially distributed phenomena are complex and multivariate processes, which vary in time in addition to space. (Zhang & Goodchild, 2003) Often these processes can be stored in data only as a set of discrete representations of infinate number of different states. In other words, many datasets only express a ”snapshot” in time. (Erwig, et al., 1999; Cressie & Wikle, 2011) Geometries change over time, in which case the term is either moving object or moving regions (fields). Some examples of moving objects are cars, or river boats. A moving field coul be a precipitation pattern; the field is omnipresent, only the region of rainfall changes over time. In addition to the geometry, qualitative components (attributes) of the entities may also change in time. In the case of rainfall, an attribute could describe the changing intensity of the rain or its acidity. According to Isard (1970), time can be classified into four types: Linear (absolute time), cyclic (recurring time), ordinal time (relative order) and time as a distance, where spatial dimension is used to represent time. Linear change is constant and trending (long term change), cyclical time is a time period which starts again when last period ends (e.g. day, week, year). Shifting change is is an abrupt, sudden change which can be short or long term.
+
+Many standard statistical analysis techniques and methods work poorly when applied on spatial (or spatio-temporal) data. The main reasons for the problems are Spatial Autocorrelation and Modifiable Area Unit Problem (and the related issues of scale and edge effects) and ecological fallacy. These are the causes of why Spatial is Special. (O'Sullivan & Unwin, 2010)
+
+
+### 3.1.2 Spatial Autocorrelation
+Spatial autocorrelation is a technical term is well described by Waldo Tobler’s famous First Law of Geography:” Everything is related to everything else, but near things are more related than distant things” (Tobler, 1970) In other words, things that are near another are more likely to be similar in their properties than things that are far apart (Note: This applies to the temporal dimension as well). Take for instance a random building in a city center: you are much more likely to find another building close by than by taking a random building in the rural countryside. Likewise, standing on a mountain you are likely closer to other mountains than to a tropical jungle. In fact, O’Sullivan and Unwin (2010) argue that geography as a science would not exist if spatial autocorrelation would not exist. The non-randomity described above is the root cause why standard statistical techniques perform poor on spatial data; most of the assume random sampling, which generally is not true in geography. Parameter estimates made from non-random samples will be biased toward the regions with largest numbers of sample points.  (O'Sullivan & Unwin, 2010)
+
+Despite the problems caused by spatial autocorrelation, techniques have been developed which can be used to describe it. Having a mathematical description helps to decide whether or not there truly is a spatial pattern, and how unusual it is. The most common measure of spatial autocorrelation is Moran’s Index (Moran’s I), which can be defined as a translation of non-spatial correlation to a spatial context. (O'Sullivan & Unwin, 2010) Moran’s I is calculated with Equation 1
+
+I= [n/(∑_(i=1)^n▒(y_i-y ̅ )^2 )]x[(∑_(i=1)^n▒〖∑_(j=1)^n▒〖w_ij (y_i-y ̅ ) 〗 (y_j-y ̅ ) 〗)/(∑_(i=1)^n▒∑_(j=1)^n▒w_ij )]		(1)
+
+
+where i and j are different zones, or areal units, y is the data value and w is a weight assigned for each zone or unit based on their spatial relationship. The value of the index is positive if most nearby data points are above or below the mean, and negative if they are on the opposite sides. Generally, Moran’s I above 0.3 or below -0.3 can be considered as relatively strong autocorrelation. (O'Sullivan & Unwin, 2010) For an excellent overview on spatial autocorrelation, and other measures than Moran’s I, the reader is forwarded to Getis (2010).
+
+
+### 3.1.3 Modifiable Area Unit Problem
+Modifiable Area Unit Problem (MAUP) stems from the property of spatial data to aggregate information in to larger spatial units. An example is a population census which is often collected at a household level, but reported in units of villages, districts, provinces, states or other similar entities. The problem is that these units are often arbitrary considering the phenomenon investigated while the choice of unit analysis affects statistics derived from them. (O'Sullivan & Unwin, 2010; Openshaw, 1983) The statistics may change when the unit area is changed, as seen in Figure 3.2. According to O’Sullivan and Unwin (2010), it is possible to show that using the same underlying data, it is possible to produce correlations whose strength is anywhere between -1 and 1! In water resources research, Salmivaara et al (2015) showed that changing the unit of assessment had a large effect on water shortage assessment in Monsoon Asia and concluded that water-related spatial studies are highly sensitive to changes in areal unit of analysis. 
+
+
+
+![](Kuvat/fig3-2.png)
+
+**Figure 3.2. Illustration of the Modifiable Area Unit Problem and its effects on regression. (O'Sullivan & Unwin, 2010)**
+
+
+
+In practise, MAUP has been largely ignored due to the difficulty in selecting an appropriate unit analysis or due to a lack of understanding. Using aggregated data to address issues or to devise policies could lead to entirely different decisions whether alternative aggregation units were used. (O'Sullivan & Unwin, 2010) Openshaw (1983) states that the MAUP is an integral part of geography, and it should not be ignored, rather, it should be turned in to an exploratory tool and exploited. It has been suggested that zoning should be independent from the phenomenon under study, but Openshaw argues that, to truly investigate phenomena, zoning will need to be relevant. However, some techniques exist which can be used to address MAUP in certain situations, such as Geographically Weighted Summary Statistics developed by Brunsdon et al (2002). This method is described in detail in Section 3.2.4.
+
+Spatial analysis is distinguished from traditional statistics also by the fact that space is not uniform. For instance, space in cities alternate between streets, parks, squares, industrial and commercial areas and residential sub-urbs. This type of non-uniformity must be considered in the spatial analysis. Another important problem associated with MAUP is edge effects which appear, as the name suggests, at the edges of a study area. Commonly, in the center of a study area there are observations in every direction, while in the edges observations exist only in the direction of the center. Often this does not reflect reality unless the study area is delimited bearing the edge effects in mind. (O'Sullivan & Unwin, 2010)
+
+
+## 3.2 Exploratory Data Analysis
+Exploratory Data Analysis (EDA) is a fundamental approach in statistics which includes all methods that are not formal statistical modelling or inference (Steltman, 2015). According to NIST/SEMATECH e-Handbook of Statistical Methods (2013), the aim of EDA is to:
+
+*	Maximize insight into a data set
+*	Uncover underlying structure
+*	Extract important variables
+*	Detect outliers and anomalies
+*	Test underlying assumptions
+*	Develop parsimonious models, and
+*	Determine optimal factor settings.
+
+In other words, EDA employs a variety of techniques which answer to a broad question of “what is going on here?” (Behrens, 1997) and can be described as data-driven hypothesis generation (Hand, et al., 2001). Roughly, the techniques fall under four categories over two axes – graphical and non-graphical and univariate and multivariate. (Steltman, 2015) In EDA the data is explored in a way that is not confirmatory as in traditional statistics. The emphasis on using statistical graphics (however, although the techniques are identical to those of statistical graphics, the approach is not) is due to human capabilities of visually identifying patterns in graphics. In particular, EDA process often consists of plotting raw data (e.g. using histograms, scatterplots, box plots…), plotting simple statistics (means, standard deviations) and to position such plots to maximize our pattern-spotting abilities. (NIST/SEMATECH, 2013; Hand, et al., 2001)
+
+EDA differs from classical statistics in its process. Traditionally, a model is imposed on data, the model’s performance is analysed and conclusions are drawn from there. In EDA the position of analysis and model is reversed; the data is first explored and a model is developed as suggested by the data. In addition, EDA process is subjective and depend on interpretation by the analyst, and thus they can differ from person to person. Traditional statistics is in a sense, more objective and formal. (NIST/SEMATECH, 2013) In addition, EDA can be characterized by the use of robust measures, re-expression of data and usage subset for further analysis. Moreover, EDA is flexible and the analyst is encouraged to scepticism and ecumenism when choosing which methods to apply. (Behrens, 1997) The explorative and confirmatory data analysis (CDA) processes, however, despite different approaches, are complementary and in practise should be used in conjunction.  EDA is first employed to investigate variables and to develop hypotheses, looking at the data in every possible direction. The result of the process are models which are put to test using confirmatory techniques. EDA and CDA converge in certain methods, which are seemingly confirmatory, but are exploratory in their goal. These methods attempt to determine the best set of variables for a model instead of simply trying to confirm a predefined set or a model. One such method is stepwise regression, in which variables are assigned to a model one-by-one according to some criterion (e.g. cross-validation or Akaike Information Criterion). (Behrens, 1997)
+
+Additionally, Behrens (1997) concludes that while documenting and publishing EDA process reduces the resources assigned for the advanced stages of modelling (and model building), the details it provides improve understanding the phenomenon under investigation in a way that simple summary statistics and tests cannot. EDA will also help prevent Type III errors: “Precisely solving the wrong problem, when you should have been working on the right problem”. More recently, EDA has been extended by a newer concept called Data Mining (DM), which is another exploratory (and predictive) approach concerning extremely large databases. DM is discussed in Section 3.3.
+
+
+### 3.2.1 Univariate Exploration
+Some of the most important univariate non-graphical methods include calculating a central tendency (mean/median/mode), spread (standard deviation, variance, interquartile range), skewness and kurtosis of a sample (these are not explained here, however a good description for all of them can be found in any introductory statistical textbook, e.g. Steltman (2015)). Many of these distributional characteristics can be qualitatively seen in a histogram, which is one of the most important graphical univariate methods. Stem and leaf plot is less known variant of a histogram, in which bins are replaced by a whole number in the stem, and a sequence of decimals of all observations that fall in to the bin (see Figure 3.3; each zero behind the bar is an observation). (Steltman, 2015) Another very useful plot is the box plot (used extensively in this study). A box plot is useful for visualizing central tendency, symmetry and skewness of the distribution as well as identifying outliers. Figure 3.4 presents an overview of the components of a Box plot. Commonly the whiskers extend 1.5 times the interquartile range (IQR, the difference between first and third quartile), and any observations beyond is considered an outlier and they are plotted individually. This study uses the 1.5 IQR definition, however, other alternatives are sometimes used (such as ones based on standard deviations).  It should be noted here that, in a ideal normally distributed sample, it can be expected that 0.7% of the sample would appear as outliers, meaning that interpretation is required. In general, box plots rely on robust statistics which makes them a great EDA tool. (Steltman, 2015)
+
+
+
+![](Kuvat/fig3-3.png)
+
+**Figure 3.3. An example of a stem and leaf plot. (Steltman, 2015)**
+
+
+
+![](Kuvat/fig3-4.png) 
+
+**Figure 3.4. An annotated Box plot. IQR stands for Interquartile range, Q1 and Q3 stand for the first and the third quartile. (Steltman, 2015)**
+
+
+
+
+![](Kuvat/fig3-5.png)
+
+**Figure 3.5. QQ-plots of normally (left) and non-normally (right) distributed samples. (Steltman, 2015)**
+
+A third univariate graphical method covered here is a quantile-normal plot (or a quantile-quantile plot, QQ plot). Many statistical tests assume that variables used to explain phenomena are approximately normally distributed. QQ plot is a way to assess the normality of a distribution. The plot is essentially a scatterplot where the values of the sample are on the x-axis and the expected normal values are plotted on y-axis. If the points fall approximately to a diagonal line, the sample is approximately normal. An example of normally and non-normally distributed plots are shown in  Figure 3.5.
+
+
+### 3.2.2 Multivariate Exploration
+Multivariate techniques explore the relationship between two or more variables. There are far more techniques for multivariate data than there are for univariate samples. Only some of the methods are covered in this section, however, the reader is directed to read the NIST/SEMATECH e-Handbook of Statistical Methods (2013) for an extensive overview of different techniques. The most used non-graphical method in the thesis is correlation. Correlation is based on covariance, which is a measure of how much two variables vary together. Positive covariance means that when a measurement is above the mean, the one it is compared to probably is above the mean too. Negative covariance occurs when one is above and the other is below the mean. Zero covariance occurs when the variables vary independently of each other. Correlation is used because it is easier to interpret than covariance; a correlation of -1 means the variables are perfectly negatively correlated while +1 signifies a perfect positive correlation. A perfect correlation places observations on a straight line in a scatterplot. (Steltman, 2015) 
+
+
+
+
+![](Kuvat/fig3-6.png)
+
+**Figure 3.6. Parallel Coordinate Plot of automotive data. Source: GGobi;  http://homes.cs.washington.edu/~jheer//files/zoo/ex/stats/parallel.html.**
+
+
+Box plots can be used in a multivariate exploration by placing them side-by-side in a plot. According to Steltman (2015) , they are the best graphical EDA technique to examine relationship between categorical and quantitative variables. In addition, they perform well in visualizing the distribution of the quantitative variable at each level of a categorical value. Scatterplots can be used to visualize two or more variables at the same time. One variable is plotted on the x-axis, another on y-axis while size, colour and marker type can be used to map additional variables in the same view. (Steltman, 2015) Scatterplots can be placed in a matrix (creating a scatterplot matrix) providing a tool to visually inspect correlations between multiple variables. The scatterplot matrix makes use of the principle of small multiples, an approach where plots are shown side by side allowing for easy and quick comparison between different categories or variables. Small multiples can be constructed for nearly all types of visualizations; scatterplots, bar charts, pie charts, maps et cetera. (Heer, et al., 2010)
+
+The final multivariate visualization method covered here is the Parallel Coordinate Plot (PCP, example shown in Figure 3.6). In PCP variables are placed side by side, and observations are represented by lines which connect the variables at their data points. An example of PCP is shown in Figure 3.6. PCP should be used in an interactive environment where reordering dimensions and filtering can help in pattern recognition. PCP’s are excellent for compactly displaying many variables simultaneously. (Heer, et al., 2010)
+
+
+### 3.2.3 Exploratory Spatial Data Analysis
+Exploratory Spatial Data Analysis (ESDA) is based on the two central principals of EDA; the importance of data and the importance of analytical graphics (Bivand, 2010). ESDA is largely based on techniques that explicitly take spatial autocorrelation in to account, such as visualization of spatial distributions and associations. In addition to geovisualization techniques, ESDA employs robust statistical methods to detect spatial properties in the data. (Haining, et al., 1998; Anselin, 1998) Modern ESDA is characterized by visualization using dynamically linked displays which often include cartographic visualization, scatterplots, histograms, box plots or variograms among others. (Bivand, 2010) Anselin’s (1998) division of ESDA techniques is given in Table 3.1. The tools are closest to the ”spirit” of cartographic visualization, however the starting point differs. In ESDA, a standard statistical graphic is the center point rather than the map. (Anselin, 1998) In addition to the methods in Table 3.1, Bivand (2010) mentions using spatial regression models as a source to explore spatial non-stationarity. Regression models can be extended to a spatial version in several ways, however, these are covered in the following section under Spatial Data Mining. For a thorough overview in different options for ESDA, the reader is directed to Bivand (2010).
+
+Geostatistics is an additional ESDA method explicitly mentioned in Bivand (2010). In general, geostatistics includes a variety of interpolation methods, including inverse distance weighting and kriging. Geographically Weighted Summary Statistics (GWSS) is an exploratory method for deriving localized summary statistics (aka descriptive statistics), which is used in this study.
+
+
+
+
+
+
+Table 3.1. Main ESDA techniques according to Anselin (1998).
+Goal	Geostatistical Perspective	Lattice Perspective
+Visualizing spatial distribution	Spatial cumulative distribution function	Box map 
+Regional histograms 
+Spatial exploratory analysis of variance
+Visualizing spatial association	Spatially lagged scatterplot Variogram cloud plot 
+Variogram boxplot 	Spatial lag charts 
+Moran scatterplot and map
+Local spatial 
+association	Outliers in variogram 
+Outliers in variogram cloud plot	LISA maps 
+Outliers in Moran scatterplot
+Multivariate spatial association	Multivariate variogram cloud plot	Multivariate Moran scatterplot
+
+
+### 3.2.4 Geographically Weighted Summary Statistics
+GWSS allows for calculation of wide variety of statistics at geographical location revealing patterns that are not possible to be seen with global statistics. (Brunsdon et al 2002) The approach of GWSS is applying a weight on each observation based on their proximity to a point (u, v). It makes use of concepts in interpolation methods, such as moving window average or focal median function from Map Algebra. However, unlike the interpolation methods, GWSS has a more relaxed requirement for specifying a certain bandwidth (BW, the distance in which observations are taken in to account) prior to the analysis. In addition, probability densities can be utilized in GWSS. (Brunsdon et al 2002) Calculation of a localized statistic requires weighting of observations. One possible way to do this is inverse distance weighting, as shown in Equation 2
+
+w_i=expa(-(d_i^2)/h^2 ) 	 		(2)
+
+
+Where di is the Euclidean distance between observation i and (u, v), h is bandwidth and wi is the given weight for observation i. Having specified a way to derive the weights, a locally weighted mean can be calculated with Equation 3
+
+x ̅(u,v)=(∑▒〖x_i w_i 〗)/(∑▒w_i )	 		(3)
+
+where wi is the weight of the ith observation and x is the value of the variable in question. (Brunsdon et al 2002) The equation above is a simple interpolation formula, however GWSS can be extended beyond the mean value. A local standard deviation (based on the localized mean) can be calculated with Equation 4
+
+s_x (u,v)=√(∑▒〖(x_i-x ̅(u,v))^2 w_i 〗) 			(4)
+
+where sx is the standard deviation of the variable x. In a similar manner, localized skewness can be calculated based on local mean and standard deviation. Table 3.2 shows a collection of typical descriptive statistics used in univariate probability density functions. All of them can be localized. (Brunsdon, et al., 2002)
+
+Table 3.2. Typical descriptive statistics for the univariate probability density function f(x). (Brunsdon et al, 2002)
+ 
+
+Weighting scheme is at the core of GWSS as well as the other methods in the GW family. Examples of geographical weighting schemes:
+
+*	Implicit weighting (global models)
+*	Excluding observations beyond a certain distance
+*	Gaussian weighting (kernel density function)
+*	Bi-square function (combination of the previous two)
+
+Excluding observations beyond certain distance causes discontinuity, where including or excluding a single observation can have a big effect on the parameter estimate. Gaussian weighting applies a weight as a function of distance from the point of interest (kernel density function). Bi-square on the other hand is a combination of the two, excluding observation further than a certain distance, but applying a distance weighting to the remaining observations. (Brunsdon et al 1996, Brunsdon et al 1998) The selection of weighting function is critical as when the seeking distance grows, the parameter estimates get closer to a global model. Calibration is therefore important. A good solution to find an optimal bandwidth is least squares cross-validation Equation 5
+
+∑▒〖 [y_i-y_(≠i)^(   *) (β)]〗^2 			(5)
+
+where y_(≠i)^(   *) (β) is the fitted value of yi with the observation for point i omitted from the calibration procedure. This way of calibration counters a wrap-around effect of overfitting the model. (Brunsdon et al 1996) It should be noted that in some cases subjective choice of the distance can be more descriptive to the reality than a computed value. This is true especially when there is strong evidence in favor of some specific distance. (Brunsdon et al 1998) Similarly to the parameter estimations vary location to location, the optimal weighting function or distance may also vary by location. Edge effects is an obvious source of this kind of issue, but also the distance that the phenomena affects may vary where edge effects are a non-issue. (Brunsdon, Fotheringham, & Charlton, 1996) One solution to this is to use an adaptive bandwidth which takes a specified n number of observations into account. Using adaptive weighting, areas of dense observations reduces the size of bandwidth as the number of local observations is high, and in areas of sparse observation population the bandwidth grows large.
+
+
+## 3.3 Spatial Data Mining
+Data mining (DM) is an exploratory approach by its nature and again, as in EDA, there is no a priori hypothesis in DM. Several definitions of DM exist. Luan (2002) defines it as ”the process of discovering hidden messages, patterns and knowledge within large amounts of data and of making predictions for outcomes or behaviors.” Larose (2005) on the other hand defines it as ”the process of automatically extracting useful information and relationships from immense quantities of data.”  Alternatively, Hand et al (2001) provides the following definition: ”Data mining is the analysis of (often large) observational data sets to find unsuspected relationships and to summarize the data in novel ways that are both understandable and useful to the data owner.” The definitions have in common that DM is a process, like EDA, rather than a set of tools. In addition, DM deals with very large databases. Despite the word ”automatically” in Larose’s definition, human input is as essential to DM as it is to EDA (Larose, 2005). These facts – large databases and utilization of automatisation and algorithms is what sets DM apart from classical EDA. It is also worthwhile to mention that DM is an interdisciplinary approach which includes statistics, database technology, machine learning, pattern recognition, artificial intelligence and information visualization. (Hand, et al., 2001; Shekhar & Chawla, 2003). The lack of predefined hypothesis allows DM to facilitate learning new and novel information and knowledge. In fact, DM is a non-deterministic and iterative process which aims to develop knowledge to be used in a decision making process. The end result of a DM process is a hypothesis, which can then be tested with statistical methods. (Miller & Han, 2009; Guo & Mennis, 2009) Hand et al (2001) define the outcomes of a DM process as models or patterns, which can be for example linear equations, rules, clusters, graphs, tree structures or recurrent patterns in time series. 
+
+Data mining and knowledge discovery can be divided into steps; data selection, data pre-processing, data enrichment, data reduction and projection, data mining and interpretation and reporting (note the absense of data collection – DM often deals with data that has already been collected (Hand, et al., 2001)). Data selection refers to determining the variables used for the data mining process. Data preprocessing is cleaning, noise reduction eliminiating duplicate records and determining how to handle missing values. Data enrichment means combining datasets. Data reduction and projection involves dimensionality reduction to further reduce the number of variables in the data, or projecting the attribute space to a more efficient representation. Data mining is the application of different methods to the data to uncover new and interesting patterns (the selection of method depend on the type of knowledge to be mined – see Table 3.3), and finally interpretation and reporting involves visualization and evaluation of the data mining process. (Miller & Han, 2009)
+
+
+
+
+
+
+ 
+Table 3.3. Data Mining methods and techniques according to Miller and Han (2009).
+ 
+
+Extending DM into Spatial Data Mining (SDM) is not a trivial task, and, depending on the technique, may include several possible methods. The challenge is due to the special nature of the data – spatial autocorrelation. According to Shekhar and Chawla (2003) The goal of spatial data mining is to
+ 
+*	Identify spatial patterns
+*	Identify spatial objects that are potential generators of patterns
+*	Identify information relevant for explaining a spatial pattern
+*	Presenting the information in a way that is intuitive and supports further analysis.
+
+The extensions of selected data mining methods in to spatial data mining methods are presented below.
+
+
+### 3.3.1 Spatial Clustering
+Clustering is a process where features are classified into groups of mutually similar features which are dissimilar with features in other groups in a way that minimizes intra-cluster and maximizes inter-cluster distances. Clustering is a method that has been used for a long time and for numerous different applications. According to Han et al. (2009), clustering methods can be divided into four groups: a) partitioning, b) hierarchical, c) density-based and d) grid based. 
+
+Partitioning methods divide the dataset of n observations into k partitions, where each partition represents a cluster. There are several algorithms to achieve the partitioning. One of the most used is k-means clustering, which is based on centroids of a cluster. In the beginning, all data points are assigned to a  random cluster. The second step is to assign observations one by one to the cluster whose mean value is the closest to the value of the observation. The next observation is then assigned based on the new cluster means, and so on. The algorithm runs until a certain criterion is reached. This method requires the user to define the number of clusters in advance which may be a big disadvantage. In addition, the method is sensitive to outliers and noise. The problem of outlier sensitivity in k-means clustering can be addressed by using k-medoid method. In k-medoid clustering, an observation is used as the object of reference instead of the mean of the cluster. The chosen medoid is the observation which is the closest to the cluster mean value. The algorithm works by minimizing the absolute error when observations are moved to other groups one by one.  (Han, et al., 2009)
+
+Hierarchical clustering produces a tree of clusters which can be formed by either agglomerative (bottom-up) of divisive (top-down) methods. AGNES (Aglomerative Nesting) is an algorithm in which at the beginning each object is in its own cluster. The process then merges the clusters into larger ones until all of the objects are in one cluster. DIANA (Divisive Analysis) does the opposite; the objects start in the same cluster and they are then divided in to subclusters until they are alone in their own clusters or another criterion is achieved.  (Han, et al., 2009) Density based clustering produces clusters with arbitrary shape (k-means for example tends to produce spherical clusters) which produces clusters in regions of dense observations separated by regions of low density. Due to the nature of the data in this study, density based clustering is not used, however, for the interested, Han et al (2009) provides a useful overview of density-based clustering algorithms. 
+
+In a multidimensional point data set (such as the villages in this study), spatial clustering can be can be achieved in a number of ways called regionalization methods. The first option is to perform trial-and-error search. An example is the Automatic Zoning Procedure, which starts with random regions (clusters) and it iteratively improves it by switching boundary objects between regions. Second, one can perform a-spatial clustering on a dataset without information on the location, followed by spatial processing. The Third option is to do clustering with a spatially weighted dissimilarity measure. In practice, this is done by incorporating spatial information (e.g. coordinates) as variables in the clustering procedure. Finally, the last option is called contiguity constrained clustering and partitioning. (Guo, 2009)
+
+
+### 3.3.2 Spatial Regression
+The need for special techniques in regression rises again with the assumption of independency and normality in traditional statistics. Several methods of extending regression analysis to spatial domain exist. Two methods are covered here; Spatial Autoregressive Models (SAR) and Geographically Weighted Regression (GWR).  SAR is a generalization of the linear regression model which accounts for spatial autocorrelation. SAR performs better than a-spatial regression models, however it is computationally heavy. SAR is, in fact, an extension of the linear regression model with an added spatial autocorrelation term ρWy in order to model the strength of spatial dependencies. Rho stands for a spatial autoregression parameter, W is a neighbourhood matrix representing spatial relationships in the data and y is the dependent variable. SAR is shown in Equation 6
+
+y=ρWy+xβ+ε			(6)
+	
+where β is the regression coefficient and ε represents random error. (Kazar & Celik, 2012)
+
+Another alternative is GWR, which is similar to GWSS in that observations are given a weight depending on their geographical proximity. It has been shown that parameter estimates for regression models can vary dramatically over geographical space if only a subset of the data is used. This may result in interesting relationships between variables being obscured if a global model is used. (Brunsdon et al 1996) The generalized form of the GWR shown in equation 5 can be calculated for any location in the geographical space, and not only in observation points. The Equation 7 for GWR is
+
+y_i=a_i0+∑▒〖a_ik x_ik+ε_i 〗		 (7)
+
+Where yi is the predicted value of the dependent variable at point i, aik is the
+value of kth parameter at location i, xik is the independent variable and εi is
+random error. (Brunsdon et al 1996, Brunsdon et al 1998)
+
+Statistical testing of GWR (or any other local regression method) may be more difficult than testing a global model. If we assume that that the variables vary according to some distribution and that there is an error, it is natural that the parameter estimates will also have some error and distribution. Many different statistical tests have been developed for the GWR (Mei et al 2016), however, testing may be challenging using standard procedures due to spatial autocorrelation, which may produce misleading results. (Wei and Qi, 2012) Standard errors, t-values, goodness-of-fit measures etc. can be localized and assessing can done based on them (Demsar et al 2008), however, it has been found that goodness-of-fit measures alone are not adequate. This is because they assume that the standard errors are independent which usually is not the case with spatial processes (Laffan and Bickford, 2005). Monte Carlo simulation is a method often used in testing the results of GWR.
+
+
+### 3.3.3 Geographically Weighted Principal Component Analysis
+Geographically Weighted Principal Component Analysis (GWPCA) is not generally explicitly mentioned in the lists of spatial data mining methods, however it is included in here due to the fact that SDM processes often include dimensionality reduction and data processing as one of the steps. 
+
+Many datasets (and especially spatial datasets) are highly multidimensional data, which poses challenges for interpretation and visualization. Therefore, it is often desirable to reduce the number of dimensions. Principal Component Analysis (PCA) is a method to reduce dimensionality while capturing the maximum information present in the dataset. PCA captures the maximum variation of data and re-projects the original information in to an orthogonal space of n-dimensions. The first principal component (PC) represents the largest variation in data. The second PC then accounts for the largest amount of variation that is not captured in the first PC. The third captures the variation not accounted for by the first or the second PC, and so on. (Demsar, et al., 2013)
+
+Wheeler and Tiefelsdorf (2005) and Mei et al (2016) have shown an important drawback of GWR that is local multicollinearity. Multicollinearity in the model variables may occur (even if they are not collinear in the global model) and this may have an adverse effect on the coefficient estimation. The local coefficients may become entirely interdependent. One possible remedy for this condition include using PCA. Like the previously introduced summary statistics and regression, PCA can be made spatially conscious. This can be achieved in three ways; with a geographically weighted variant (GWPCA), adapted PCA taking spatial autocorrelation into account or by combining these two. (Harris, et al., 2011) The method used in this thesis is GWPCA, which is a natural extension of Locally Weighted PCA with the exception that the locally weighted variant gets its weights from attribute space instead of geographical space. (Harris, et al., 2011)
+
+GWPCA is achieved by computing geographically weighted means, variances and covariances for each data observation (See section 3.2.4). GW covariance between variables y1 and y2 for location i is given by Equation 8
+
+cov(y_1i,y_2i )=∑_(j=1)^n▒〖w_ij (y_1j-y ̅_1i)(y_2j-y ̅_2i)〗 	(8)
+
+Geographically weighted correlation coefficient can then be computed from the GW covariance and GW variances. GWPCA can also be calculated from a correlation matrix, which is required if the variable values are not in the same units. (Lloyd, 2010) Applications of GWPCA include addressing problems in GWR models as a means for local dimensionality reduction or local orthogonalization prior to applying GWR (Demsar et al 2013, Charlton et al 2010).
+
+ 

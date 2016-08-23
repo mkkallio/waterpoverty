@@ -1,0 +1,358 @@
+---
+title: "5 Results"
+output: html_notebook
+---
+
+
+## 5.2	Spatial Dimensions of Water Poverty
+WPI was calculated for dry and wet seasons explicitly, using variables described in Sec-tion 4.2. The result is a distinct index number for each village in the data used for the analysis. The following sections first describe the spatial dimensions of the dry and wet season WPI separately, answering to the first research question ”Are there distinct differ-ences between areas in their water poverty?” 
+
+
+### 5.2.1	Dry Season
+Scores of individual components vary quite substantially with lowest scores found in USE component and the highest in CAP and ENV. Maps of geographically weighted mean for each component as well as overall WPI are shown in Figure 5.13 (village level plots are provided in Appendix 3). Clear regions of higher and lower score can be found for each of the components. Northern part of Laos score higher in Resources than the rest of the country. This is due to the monsoon not having as big effect in the mountain-ous north as in the rest of the country: Rainfall is more stable throughout the year. Ac-cess component shows surprising pattern with lower score near Mekong and Thailand (the less water poor regions), and with capital area scoring medium high. The highest Access score is found in the north in a few small ”islands”. The variables underlying ACC are fairly randomly distributed accross the country with the exception of Toilet type, which scores high near the capital area. Capacity on the other hand seems highly autocorrelated with the highest scores found near the Thai border. The further away from the border, the lower the Capacity. USE component shows three distinct ”stripes” of high values with lower values in between and around them. The score more or less visually corresponds to the variabes used to calculate the component.  The last compo-nent, ENV exhibits two regions of high scores; in the south between Bolaven Plateau and around the capital area. Notably, the capital itself scores low due to high impact of Human Footprint. Figure 5.13f presents the computed WPI for Laos using a PCA de-rived ”objective” weighting and computed using multiplicative (geometric mean) func-tion as explained in Section 4.2.6. Dry season water poverty seems high (low index val-ues) in the northern mountainous areas as well as in the southeast corner of the country.  Low water poverty region follows the Mekong river in the Thai border with an intrusion to northern laos through Vientiane and Xiengkhuang provinces. 
+
+Spatial autocorrelation was analyzed for the component scores and WPI using the ”spdep” package in R. Resources, Use and Environment component along with the overall WPI all have medium strenght spatial autocorrelation with Moran’s I between 0.48 to 0.63. Capacity on the other hand has a stronger spatial dependence with the in-dex value reaching 0.78. Access, on the other hand has a weaker spatial relationship with Moran’s I of 0.32. The semi-strong index value of WPI tells, along with the map in Figure 5.13f, that there are distinct areas of low and high water poverty in the country during dry season. This partly answers to the first research question of whether there are distinct differences between areas in their water poverty.
+
+In order to explore the provincial dimension, a density plot for dry season WPI is given in Figure 5.14 for each province. For better view on the plots, interactive version is available in the authors website at http://markokallio.fi/waterpoverty/. In addition, a ta-ble of summary statistics is provided in Appendix 3. The density plots clearly indicate a left-tailed normal distribution for the country level WPI values, with a mean of 54.60. Looking at the individual densities, Xekong appears to be the poorest of all provinces with majority of the poorest villages located in the province. In addition, Houaphan and Phongsaly also include some of the villages with lowest dry season scores. In the other end of the scale, Vientiane Capital and Bolikhamxai are the most water rich provinces in the dry season, with a clear margin. The same provinces inhabit the bottom and top when looking at the mean and median of village WPI rankings. Three categories can be identified; Xekong, Oudomxai, Houaphan, Xayabouly, Phongsaly and Louangnamtha form the water poor provinces, in the order of mention. The median WPI rank of these provinces fall between 1700 and 2890 (out of 8215). The water-rich (or at least relative-ly water-rich) provinces are Bolikhamxai and Vientiane Capital by a clear margin with median WPI ranks of 6922 and 6653 respectively. The mid-range group consists of the remaining provinces and their median WPI ranks fall between 4081 and 4968. It should be noted that each province contain a villages through the entire range, meaning that the provinces are far from being universally water-poor or water-rich. A map of the village ranking is given in Figure 5.15.
+```{r, message = FALSE}
+######################
+
+# Prepare required libraries, functions and data
+
+######################
+
+######### Load required libraries 
+library(rgdal)
+library(sp)
+library(GISTools)
+library(spdep)
+library(ggplot2)
+library(gridExtra)
+library(raster)
+library(deldir)
+library(GWmodel)
+library(spgwr)
+library(classInt)
+library(DescTools)
+library(reshape)
+library(cluster)
+library(plotly)
+library(ggiraph)
+
+####################################################################
+####################### Load data 
+####################################################################
+
+load("BG.RData")
+
+# Load GWSS data, or calculate it with the commented out commands
+load("GWSS.RData")
+
+# GWSS on a grid of 1000 points
+# components
+#dryWPI_gwss_400NN_comp <- gwss(WPIdata, s.grid, vars=c("dryWPIgpca", "dryRES", "dryACC", "dryCAP", "dryUSE", "dryENV"), bw=400, adaptive=T, quantile=F, dMat=distMat.grid)
+#wetWPI_gwss_400NN_comp <- gwss(WPIdata, s.grid, vars=c("wetWPIgpca", "wetRES", "wetACC", "wetCAP", "wetUSE", "wetENV"), bw=400, adaptive=T, quantile=F, dMat=distMat.grid)
+
+# variables
+#dryWPI_gwss_400NN_vars <- gwss(WPIdata, s.grid, vars=c("dryWPIgpca", "DryAvail","AvMaxDDay", "Irrigation", "DrinkNS", "ToiletType", "TimeCap", "DryRoad", "LitPopSh", "IncPov", "IrrAreaSh", "AgAreaPerC", "AgAqDepend", "ECO_V_cat", "dryDisast", "SoilDeg","HumanFP"), bw=400, adaptive=T, quantile=F, dMat=distMat.grid)
+#wetWPI_gwss_400NN_vars <- gwss(WPIdata, s.grid, vars=c("wetWPIgpca", "WetAvail", "Irrigation", "DrinkNS", "ToiletType", "TimeCap", "WetRoad", "LitPopSh", "IncPov", "IrrAreaSh", "AgAreaPerC", "AgAqDepend", "ECO_V_cat", "wetDisast", "SoilDeg", "HumanFP"), bw=400, adaptive=T, quantile=F, dMat=distMat.grid)
+
+
+```
+
+```{r}
+
+# Map local means of WPI components 
+########## FOR TEXT 
+par(mfrow=c(1,2), mar=c(1,3,1,1))
+############ Local mean
+
+#RES
+breaks <- classIntervals(dryWPI_gwss_400NN_comp$SDF$dryRES_LM, n=5, style='quantile')
+colours <- brewer.pal(6, 'Blues')
+# dry LM
+predmat <- matrix(dryWPI_gwss_400NN_comp$SDF$dryRES_LM, length(ux), length(uy) )
+plot(LaoAdmin0, border=NA, col=NA)
+.filled.contour(ux,uy, predmat, col=colours, levels=round(c(0,breaks$brks[1:5],100), digits=1) )
+plotBG()
+sh <- shading(breaks=round(breaks$brks[1:5], digits=1), cols=colours)
+choro.legend(px='bottomleft', sh=sh, bg='white')
+title("a) Dry season RES")
+
+#ACC
+breaks <- classIntervals(dryWPI_gwss_400NN_comp$SDF$dryACC_LM, n=5, style='quantile')
+colours <- brewer.pal(6, 'Greens')
+# dry LM
+predmat <- matrix(dryWPI_gwss_400NN_comp$SDF$dryACC_LM, length(ux), length(uy) )
+plot(LaoAdmin0, border=NA, col=NA)
+.filled.contour(ux,uy, predmat, col=colours, levels=round(c(0,breaks$brks[1:5],100), digits=1) )
+plotBG()
+sh <- shading(breaks=round(breaks$brks[1:5], digits=1), cols=colours)
+choro.legend(px='bottomleft', sh=sh, bg='white')
+title("b) Dry season ACC")
+
+#CAP
+breaks <- classIntervals(dryWPI_gwss_400NN_comp$SDF$dryCAP_LM, n=5, style='quantile')
+colours <- brewer.pal(6, 'Purples')
+# dry LM
+predmat <- matrix(dryWPI_gwss_400NN_comp$SDF$dryCAP_LM, length(ux), length(uy) )
+plot(LaoAdmin0, border=NA, col=NA)
+.filled.contour(ux,uy, predmat, col=colours, levels=round(c(0,breaks$brks[1:5],100), digits=1) )
+plotBG()
+sh <- shading(breaks=round(breaks$brks[1:5], digits=1), cols=colours)
+choro.legend(px='bottomleft', sh=sh, bg='white')
+title("c) Dry season CAP")
+
+#USE
+breaks <- classIntervals(dryWPI_gwss_400NN_comp$SDF$dryUSE_LM, n=5, style='quantile')
+colours <- brewer.pal(6, 'Oranges')
+# dry LM
+predmat <- matrix(dryWPI_gwss_400NN_comp$SDF$dryUSE_LM, length(ux), length(uy) )
+plot(LaoAdmin0, border=NA, col=NA)
+.filled.contour(ux,uy, predmat, col=colours, levels=round(c(0,breaks$brks[1:5],100), digits=1) )
+plotBG()
+sh <- shading(breaks=round(breaks$brks[1:5], digits=1), cols=colours)
+choro.legend(px='bottomleft', sh=sh, bg='white')
+title("d) Dry season USE")
+
+#ENV
+breaks <- classIntervals(dryWPI_gwss_400NN_comp$SDF$dryENV_LM, n=5, style='quantile')
+colours <- brewer.pal(6, 'Greys')
+# dry LM
+predmat <- matrix(dryWPI_gwss_400NN_comp$SDF$dryENV_LM, length(ux), length(uy) )
+plot(LaoAdmin0, border=NA, col=NA)
+.filled.contour(ux,uy, predmat, col=colours, levels=round(c(0,breaks$brks[1:5],100), digits=1) )
+plotBG()
+sh <- shading(breaks=round(breaks$brks[1:5], digits=1), cols=colours)
+choro.legend(px='bottomleft', sh=sh, bg='white')
+title("e) Dry season ENV")
+
+#Total
+breaks <- classIntervals(dryWPI_gwss_400NN_comp$SDF$dryWPIgpca_LM, n=5, style='quantile')
+colours <- brewer.pal(6, 'Reds')
+# dry LM
+predmat <- matrix(dryWPI_gwss_400NN_comp$SDF$dryWPIgpca_LM, length(ux), length(uy) )
+plot(LaoAdmin0, border=NA, col=NA)
+.filled.contour(ux,uy, predmat, col=colours, levels=round(c(0,breaks$brks[1:5],100), digits=1) )
+plotBG()
+sh <- shading(breaks=round(breaks$brks[1:5], digits=1), cols=colours)
+choro.legend(px='bottomleft', sh=sh, bg='white')
+title("f) Dry season WPI")
+```
+
+**Figure 5.13. WPI components and WPI for dry season. The WPI score is calculated using PCA de-rived weighting scheme from the components and combined using a multiplicative function.**
+ 
+ 
+ 
+ 
+ 
+
+```{r, message=FALSE, warning=FALSE, fig.width=15}
+#########plot WPI density per province
+temp <- table(WPIdata$bcne)
+temp <- as.data.frame(temp)
+tempnames <- as.character(temp[,"Var1"])
+provinceWPIsummary <- vector()
+provinceWPIplot <- rep(NA,1000)
+for (i in 1:length(tempnames)) {
+	temppro <- tempnames[i]
+	tempdry <- summary(rank(WPIdata$dryWPIgpca)[WPIdata$bcne==temppro])
+	provinceWPIsummary <- rbind(provinceWPIsummary, c(as.character(temppro), tempdry))
+	
+	tempdry <- c(WPIdata$dryWPIgpca[WPIdata$bcne==temppro], rep(NA, 1000 - length(WPIdata$dryWPIgpca[WPIdata$bcne==temppro])))
+	provinceWPIplot <- data.frame(provinceWPIplot, tempdry)
+}
+provinceWPIsummary <- as.data.frame(provinceWPIsummary)
+provinceWPIplot <- provinceWPIplot[,-1]
+colnames(provinceWPIplot) <- tempnames
+rm('temp','tempnames','temppro','tempdry')
+
+temp <- melt(provinceWPIplot)
+
+p1 <- ggplot(temp, aes(value, fill=variable)) +  geom_density(position='stack', alpha=0.5) + ggtitle('Provincial WPI densities') + theme_bw() + theme(axis.title.x=element_blank(), axis.title.y=element_blank()) + labs(x='WPI') + scale_fill_discrete(name='')
+p2 <- ggplot(temp, aes(value, colour = variable)) +  geom_density() + ggtitle('Provincial WPI densities') + theme_bw() + theme(axis.title.x=element_blank(), axis.title.y=element_blank()) + labs(x='WPI') + scale_colour_discrete(name='')
+
+ggplotly(p1)
+ggplotly(p2)
+```
+
+**Figure 5.14. Stacked density (left) and normal density plots for dry season WPI in each province.**
+
+ 
+ 
+ 
+ 
+ 
+ 
+
+```{r}
+
+###### Plot dry season ranks // GGPLOT2
+label <- paste("Province:", Provinces,"<br> District:", Districts,"<br> Village:", Villages, "<br> WPI:", WPIdata$dryWPIgpca, "<br> WPI rank:", rank(WPIdata$dryWPIgpca), sep=" ")
+temp <- data.frame(WPIdata$wid, rank(WPIdata$dryWPIgpca), label)
+colnames(temp) <- c('id','Rank', 'label')
+temp2 <- merge(voronoi.f,temp, by='id')
+
+map <- ggplot(temp2, aes(x = long, y = lat, fill = Rank)) + geom_polygon_interactive(aes(group = group, tooltip=label), colour = NA) + coord_equal() + scale_fill_gradient2(low='red', mid='yellow', high='blue', midpoint=4108) + theme_minimal()
+map <- map + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('Dry season WPI ranks') + theme(axis.title.x=element_blank(), axis.title.y=element_blank())
+
+
+ggiraph(code= print(map), zoom=5)
+
+rm('temp', 'temp2','map')
+
+```
+
+**Figure 5.15. Rank plot of dry season WPI. Ranks are ordered so that the highest ranks are given to villages with the highest WPI. **
+
+
+A pairwise t-test was run for the WPI values to find out whether the provincial differ-ences in mean WPI is statistically significant. As a result, null hypothesis of there being no differences is rejected with extremely high confidence level. Naturally, some prov-inces are similar in their distributions, but overall the results support the interpretation of significant differences. This and a visual evaluation of the figures presented gives a con-firming answer to the first research question. Significant spatial differences in the water poverty level across Laos do exist in the dry season.
+
+
+
+### 5.2.2	Wet Season
+Localized statistics were also calculated for wet season components using GWSS with an adaptive bandwidth of 400 nearest neighbours, presented in Figure 5.16. The result-ing maps are close to the ones shown for dry season (Figure 5.13). The main difference between the seasons is, as may be expected, in the Resources component due to the Monsoon. The mean value for RES rises from 48.6 in the dry season to 83.4 in the wet season. Access component is identical between the seasons, and the other components Capacity, Use and Environment show only minor differences. However, the direction of the change is interesting. Capacity is, in fact, lower in the wet season than in the dry season. The reason for this is road access; a large number of villages are cut off from the road network during the wet season. In Use component, the change is mostly positive, however, in the south of the country (Savannakhet, Attapeu, Champasak and Xekong) some villages show changes are towards the negative. Finally, ENV scores generally higher in the wet season, however, there are occasional differences as the distribution of scores increases in range (see Figure 5.12). The distributions of seasonal WPI looks simi-lar, however the values are approximately 10 points higer than in the counterpart. Villag-es located close to the Mekong/Thai border again, score higher in than villages near the borders to Viet Nam and China. The border area between provinces of Xiengkhuang, Houaphan and Louang Phabang, which scored high in dry season, fall to mid-range score in the wet season.
+
+The components show a somewhat higher degree of spatial autocorrelation in the wet season than in the dry season. Two of the components, Resources and Capacity have very strong spatial relationships with Moran’s I of 0.81 and 0.75 respectably. Access component does not have variables that change between seasons, and therefore there is no change in Moran’s I either. The value for Use is slightly lower (0.44) than in the dry season, and for overall WPI score, it is slightly higher (0.66). 
+
+Density plot for the province WPI values is shown in Figure 5.17, as was shown for dry season in the previous section.  The same provinces stand out as poor as in the dry sea-son. Xekong is as a clear outlier and scores by fat the lowest. Phongsaly and Houaphan are joined by Oudomxai to form the group of poor provinces. Bolikhamxai, on the other hand, is a clear outlier in the rich part of the wet season WPI range. Again, it is the rich-est province with a clear margin, followed by a group formed by Vientiane, Vientiane Capital and Salavan. Three of these four are neighbours in central Laos to the north and east of the capital city, and Salavan located in southern part of the country, just north of Bolaven Plateau.  
+
+
+
+```{r}
+
+par(mfrow=c(1,2), mar=c(1,3,1,1))
+
+#RES
+breaks <- classIntervals(wetWPI_gwss_400NN_comp$SDF$wetRES_LM, n=5, style='quantile')
+colours <- brewer.pal(6, 'Blues')
+# wet LM
+predmat <- matrix(wetWPI_gwss_400NN_comp$SDF$wetRES_LM, length(ux), length(uy) )
+plot(LaoAdmin0, border=NA, col=NA)
+.filled.contour(ux,uy, predmat, col=colours, levels=round(c(0,breaks$brks[1:5],100), digits=1) )
+plotBG()
+sh <- shading(breaks=round(breaks$brks[1:5], digits=1), cols=colours)
+choro.legend(px='bottomleft', sh=sh, bg='white')
+title("a) Wet season RES")
+
+#ACC
+breaks <- classIntervals(wetWPI_gwss_400NN_comp$SDF$wetACC_LM, n=5, style='quantile')
+colours <- brewer.pal(6, 'Greens')
+# wet LM
+predmat <- matrix(wetWPI_gwss_400NN_comp$SDF$wetACC_LM, length(ux), length(uy) )
+plot(LaoAdmin0, border=NA, col=NA)
+.filled.contour(ux,uy, predmat, col=colours, levels=round(c(0,breaks$brks[1:5],100), digits=1) )
+plotBG()
+sh <- shading(breaks=round(breaks$brks[1:5], digits=1), cols=colours)
+choro.legend(px='bottomleft', sh=sh, bg='white')
+title("b) Wet season ACC")
+
+#CAP
+breaks <- classIntervals(wetWPI_gwss_400NN_comp$SDF$wetCAP_LM, n=5, style='quantile')
+colours <- brewer.pal(6, 'Purples')
+# wet LM
+predmat <- matrix(wetWPI_gwss_400NN_comp$SDF$wetCAP_LM, length(ux), length(uy) )
+plot(LaoAdmin0, border=NA, col=NA)
+.filled.contour(ux,uy, predmat, col=colours, levels=round(c(0,breaks$brks[1:5],100), digits=1) )
+plotBG()
+sh <- shading(breaks=round(breaks$brks[1:5], digits=1), cols=colours)
+choro.legend(px='bottomleft', sh=sh, bg='white')
+title("c) Wet season CAP")
+
+#USE
+breaks <- classIntervals(wetWPI_gwss_400NN_comp$SDF$wetUSE_LM, n=5, style='quantile')
+colours <- brewer.pal(6, 'Oranges')
+# wet LM
+predmat <- matrix(wetWPI_gwss_400NN_comp$SDF$wetUSE_LM, length(ux), length(uy) )
+plot(LaoAdmin0, border=NA, col=NA)
+.filled.contour(ux,uy, predmat, col=colours, levels=round(c(0,breaks$brks[1:5],100), digits=1) )
+plotBG()
+sh <- shading(breaks=round(breaks$brks[1:5], digits=1), cols=colours)
+choro.legend(px='bottomleft', sh=sh, bg='white')
+title("d) Wet season USE")
+
+#ENV
+breaks <- classIntervals(wetWPI_gwss_400NN_comp$SDF$wetENV_LM, n=5, style='quantile')
+colours <- brewer.pal(6, 'Greys')
+# wet LM
+predmat <- matrix(wetWPI_gwss_400NN_comp$SDF$wetENV_LM, length(ux), length(uy) )
+plot(LaoAdmin0, border=NA, col=NA)
+.filled.contour(ux,uy, predmat, col=colours, levels=round(c(0,breaks$brks[1:5],100), digits=1) )
+plotBG()
+sh <- shading(breaks=round(breaks$brks[1:5], digits=1), cols=colours)
+choro.legend(px='bottomleft', sh=sh, bg='white')
+title("e) Wet season ENV")
+
+#Total
+breaks <- classIntervals(wetWPI_gwss_400NN_comp$SDF$wetWPIgpca_LM, n=5, style='quantile')
+colours <- brewer.pal(6, 'Reds')
+# wet LM
+predmat <- matrix(wetWPI_gwss_400NN_comp$SDF$wetWPIgpca_LM, length(ux), length(uy) )
+plot(LaoAdmin0, border=NA, col=NA)
+.filled.contour(ux,uy, predmat, col=colours, levels=round(c(0,breaks$brks[1:5],100), digits=1) )
+plotBG()
+sh <- shading(breaks=round(breaks$brks[1:5], digits=1), cols=colours)
+choro.legend(px='bottomleft', sh=sh, bg='white')
+title("f) Wet season WPI")
+
+```
+
+**Figure 5.16. WPI components and WPI for wet season. The WPI score is calculated using PCA de-rived weighting scheme from the components and combined using a multiplicative function. Note that the colouring is relative to the component, not over the entire range 0-100.**
+ 
+```{r, message=FALSE, warning=FALSE, fig.width=15}
+#########plot WPI density per province
+#plot WPI density per province
+temp <- table(WPIdata$bcne)
+temp <- as.data.frame(temp)
+tempnames <- as.character(temp[,"Var1"])
+provinceWPIsummary <- vector()
+provinceWPIplot <- rep(NA,1000)
+for (i in 1:length(tempnames)) {
+	temppro <- tempnames[i]
+	tempwet <- summary(WPIdata$wetWPIgpca[WPIdata$bcne==temppro])
+	provinceWPIsummary <- rbind(provinceWPIsummary, c(as.character(temppro), tempwet))
+	
+	tempwet <- c(WPIdata$wetWPIgpca[WPIdata$bcne==temppro], rep(NA, 1000 - length(WPIdata$wetWPIgpca[WPIdata$bcne==temppro])))
+	provinceWPIplot <- data.frame(provinceWPIplot, tempwet)
+}
+provinceWPIsummary <- as.data.frame(provinceWPIsummary)
+provinceWPIplot <- provinceWPIplot[,-1]
+colnames(provinceWPIplot) <- tempnames
+rm('temp','tempnames','temppro','tempwet')
+
+temp <- melt(provinceWPIplot)
+
+p1 <- ggplot(temp, aes(value, fill=variable)) +  geom_density(position='stack', alpha=0.5) + ggtitle('Provincial WPI densities') + theme_bw() + theme(axis.title.x=element_blank(), axis.title.y=element_blank()) + labs(x='WPI') + scale_fill_discrete(name='')
+p2 <- ggplot(temp, aes(value, colour = variable)) +  geom_density() + ggtitle('Provincial WPI densities') + theme_bw() + theme(axis.title.x=element_blank(), axis.title.y=element_blank()) + labs(x='WPI') + scale_colour_discrete(name='')
+
+ggplotly(p1)
+ggplotly(p2)
+```
+
+**Figure 5.17. Stacked density (left) and normal density plots for wet season WPI in each province.**
+ 
+```{r}
+
+###### Plot dry season ranks // GGPLOT2
+label <- paste("Province:", Provinces,"<br> District:", Districts,"<br> Village:", Villages, "<br> WPI:", WPIdata$wetWPIgpca, "<br> WPI rank:", rank(WPIdata$wetWPIgpca), sep=" ")
+temp <- data.frame(WPIdata$wid, rank(WPIdata$wetWPIgpca), label)
+colnames(temp) <- c('id','Rank', 'label')
+temp2 <- merge(voronoi.f,temp, by='id')
+
+map <- ggplot(temp2, aes(x = long, y = lat, fill = Rank)) + geom_polygon_interactive(aes(group = group, tooltip=label), colour = NA) + coord_equal() + scale_fill_gradient2(low='red', mid='yellow', high='blue', midpoint=4108) + theme_minimal()
+map <- map + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('Dry season WPI ranks') + theme(axis.title.x=element_blank(), axis.title.y=element_blank())
+
+
+ggiraph(code= print(map), zoom=5)
+
+rm('temp', 'temp2','map')
+
+```
+ 
+**Figure 5.18. Wet season WPI ranks, ordered so that higher rank is given to the villages with higher WPI.**
+
+
+The wet season rank plot for villages in Figure 5.18 again confirms what was found for wet season above. However, as opposed to the dry season ranks (Figure 5.15),  the poor regions are much more clustered. Phongsaly, Oudomxai, Xekong, Louangnamtha and Houaphan contain most of the poorest villages both visually and when inspecting the median provincial WPI rank. Blikhamxai is the most water-rich province by a large mar-gin in this statistic; the median WPI rank is 7529 out of 8215 villages. Vientiane Capital is trailing with median rank of 6351. 
+
+A pairwise t-test confirms that the mean WPI for the provinces are different, giving the final confirmation that water poverty indeed is behaving spatially varying phenomenon. This applies to the variables used to build the index, to all of its components and to the two seasonal indices.
+

@@ -87,24 +87,10 @@ WPIdata$DrinkOther <- WPIdata$DrinkOther -1
 WPIdata$DrinkNS <- WPIdata$DrinkNS -1
 WPIdata$Drink70Pip <- WPIdata$Drink70Pip -1
 
-#WPIdata$DrinkSourc <- as.numeric(WPIdata$DrinkSourc)
-#WPIdata$WatSupp <- as.numeric(WPIdata$WatSupp)
-
-#WPIdata$NormRF3a <- as.numeric(WPIdata$NormRF3a)
-#WPIdata$StartRF3a <- as.numeric(WPIdata$StartRF3a)
-#WPIdata$AmountRF3a <- as.numeric(WPIdata$AmountRF3a)
-
-#WPIdata$HealthCent <- as.numeric(WPIdata$HealthCent)
-#WPIdata$TWalkHC <- as.numeric(WPIdata$TWalkHC)
-#WPIdata$RoadAcc <- as.numeric(WPIdata$RoadAcc)
-#WPIdata$ECO_V_cat <- as.numeric(WPIdata$ECO_V_cat)
-#WPIdata$SoilDeg <- as.numeric(WPIdata$SoilDeg)
-#WPIdata$LandType <- as.numeric(WPIdata$LandType)
-
 WPIdata$wcdagqa10 <- as.numeric(WPIdata$wcdagqa10)
 
 
-###### WPIdata original.
+###### get another copy of WPIdata that is unscaled
 WPIdata_orig <- readShapePoints("WPIdata2", proj4string=CRS("+init=epsg:32648")) # to keep the original values
 
 
@@ -134,8 +120,7 @@ WPIdata$DrinkNS <- WPIdata$DrinkPipe + WPIdata$DrinkPrWel + WPIdata$DrinkUnprW -
 WPIdata$DrinkNS <- WPIdata$DrinkNS +3
 WPIdata$DrinkNS <- WPIdata$DrinkNS/max(WPIdata$DrinkNS)
 WPIdata$DrinkNS <- 100-WPIdata$DrinkNS*100
-# Alternative based on Drinking water source from PopCensus
-#WPIdata$DrinkSourc <- 100 - ((WPIdata$DrinkSourc -1) * 100/6)
+
 
 # Toilet type
 TT <- WPIdata$ToiletType
@@ -238,32 +223,6 @@ DD <- 100-(DD*100)
 WPIdata$AvMaxDDay <-DD
 rm(DD)
 
-########################## Model results
-#well <- cbind(WPIdata$DrinkPrWel, WPIdata$DrinkUnprW)
-#well <- WPIdata$DrinkPrWel + WPIdata$DrinkUnprW
-#wells <- vector()
-#for (i in nrow(well)) {
-#	if (well[i,1] == 1 || well[i,2] == 1) {
-#		wells <- c(wells, 1)
-#	} else {
-#		wells <- c(wells, 0)
-#	}
-#}
-
-#surfacewater and precipitation, mm/1000 capita
-#POP <- WPIdata$TotalPop
-#POP <- POP/1000
-#DRY <- WPIdata$DrySurf  + WPIdata$DryPrec/100
-#DRY <- DRY/POP
-#DRY[DRY > 5] <- 5
-#DRY <- DRY/max(DRY)
-#WET <- WPIdata$WetSurf  + WPIdata$WetPrec/100
-#WET <- WET/POP
-#WET[WET > 5] <- 5
-#WET <- WET/max(WET)
-
-#WPIdata$DryAvail <- DRY*100
-#WPIdata$WetAvail <- WET*100
 
 # NEW
 POP <- WPIdata$TotalPop
@@ -288,16 +247,7 @@ WPIdata$WetAvail <- WET*100
 
 
 rm('WET','DRY','AbsScarcity','AvScarcity')
-#DRY <- WPIdata$DrySoil
-#WET <- WPIdata$WetSoil
-#MAX <- 1000
-#DRY[DRY > MAX] <- MAX
-#WET[WET > MAX] <- MAX
-#DRY <- DRY/MAX
-#WET <- WET/MAX
-#WPIdata$DrySoil <- DRY
-#WPIdata$WetSoil <- WET
-#rm('DRY','WET','MAX')
+
 
 WPIdata$DryPrec <- WPIdata$DryPrec/max(WPIdata$WetPrec)*100
 WPIdata$WetPrec <- WPIdata$WetPrec/max(WPIdata$WetPrec)*100
@@ -312,14 +262,9 @@ WU <- POP
 WU[popo2000] <- WU[popo2000]*0.15
 WU[pop2000] <- WU[pop2000]*0.15
 WU[popu2000] <- WU[popu2000]*0.06
-# water use per available resource
-#AVW
-#blaaaaa
 WPIdata$DomWatUse <- WU
 rm('WU', 'popo2000', 'popu2000','POP','pop2000')
 
-# total water consumption
-#WC <- 0 
 
 # Incidence of poverty
 WPIdata$IncPov <- 100-WPIdata$IncPov

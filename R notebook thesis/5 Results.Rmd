@@ -1,0 +1,374 @@
+---
+title: "5 Results"
+output:
+  html_notebook: default
+  pandoc_args: [ 
+      "+RTS", "-M2048", 
+      "-RTS" 
+    ] 
+---
+
+The results chapter is organized so that for each analysis, first dry and wet season WPI are analysed separately, followed by a comparison of the two. First the initial data set and selected variables are explored. In the second part the first research question (the spatial dimension) is investigated. Once an answer is established, the second research question is addressed by pitting the seasonal WPI’s against each other. Finally, in the last part, data mining on the causes of water poverty is performed in order to answer the third research question.
+
+## 5.1	Exploring the Variables
+
+The final dataset used for the analysis consists of a total of 8215 villages, which is the number of villages with data on both main datasets (population and agricultural census-es). The number can be considered extremely high, since the United Nations in Lao PDR country profile (2015) places the number of villages in Laos to approximately 8600. The number of villages in the dataset for each province is shown in Figure 5.1. Attapeu and Xekong contain the least numbers (145 and 226 respectively), while the biggest numbers are found in Houaphan, Luang Prabang and Savannakhet (710, 707 and 997 respectively). A dot density map of the villages in Figure 5.2 shows the prov-ince borders and the village locations. Villages in the data cover nearly all corners of the country and they form a representative sample. 
+```{r, message = FALSE}
+######################
+
+# Prepare required libraries, functions and data
+
+######################
+
+######### Load required libraries 
+library(rgdal)
+library(sp)
+library(GISTools)
+library(spdep)
+library(ggplot2)
+library(gridExtra)
+library(raster)
+library(deldir)
+library(GWmodel)
+library(spgwr)
+library(classInt)
+library(DescTools)
+library(reshape)
+library(cluster)
+library(plotly)
+library(ggiraph)
+
+####################################################################
+####################### Load data 
+####################################################################
+
+load("BG.RData")
+```
+
+```{r, message=FALSE, warning=FALSE}
+
+#plot village numbers per province
+temp <- table(WPIdata$bcne)
+temp <- as.data.frame(temp)
+p <- ggplot(temp) + geom_bar_interactive(aes(Var1,Freq, fill=factor(Var1), tooltip=Var1), stat='identity') + theme_minimal() + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),legend.position="none",axis.text.x = element_text(angle = 45, hjust = 1)) + ggtitle('Number of Villages') 
+
+ggiraph(code = print(p), width=.7)
+
+rm('temp', 'p')
+
+```
+**Figure 5.1. Number of villages in the dataset for each province of Laos.**
+
+```{r, message = FALSE, warning=FALSE}
+label <- paste("Province:", Provinces,"<br> District:", Districts,"<br> Village:", Villages, sep=" ")
+
+bmap <- ggplot(LaoAdmin1.f, aes(x = long, y = lat)) + geom_polygon_interactive(aes(group = group), colour = I("grey65"), size=0.2, fill = "white") + coord_equal() 
+map <- bmap + geom_point_interactive(data=as.data.frame(coordinates(WPIdata)), aes(x=coords.x1,y=coords.x2, fill=factor(Provinces), colour=factor(Provinces), tooltip=label), size=0.1)+ theme_minimal() + theme(axis.text.x = element_blank(), axis.text.y=element_blank(),axis.title.x=element_blank(), axis.title.y=element_blank(), legend.position="none")
+
+#dtop <- ggplot()+geom_line(aes(as.data.frame(coordinates(WPIdata)[,1])), stat='density')+ theme_bw() + theme(axis.line=element_blank(), axis.text.x=element_blank(), axis.ticks=element_blank(), axis.title.x=element_blank(), axis.title.y=element_blank())
+#dright <- ggplot()+geom_line(aes(as.data.frame(coordinates(WPIdata)[,1])), stat='density') + coord_flip()+ theme_bw() + theme(axis.line=element_blank(), axis.text.y=element_blank(), axis.ticks=element_blank(), axis.title.x=element_blank(), axis.title.y=element_blank())
+#empty <- ggplot()+geom_point(aes(1,1), colour="white") + theme(axis.ticks=element_blank(), panel.background=element_blank(), axis.text.x=element_blank(), axis.text.y=element_blank(), axis.title.x=element_blank(), axis.title.y=element_blank())
+
+#p <- grid.arrange(dtop, empty, map, dright, ncol=2, nrow=2, widths=c(4, 1), heights=c(1, 4))
+
+ggiraph(code = print(map), zoom_max=5)
+
+rm('bmap','map')
+
+```
+
+ 
+**Figure 5.2. Dot density map of villages in the dataset. Coordinate system used is UTM Zone 48N (EPSG: 32648).**
+
+
+
+### 5.1.1	Resources
+Resources Index consists of three variables which describe different aspects of the water availability. Box plots of the variables in dry and wet season are shown in Figure 5.3. Strikingly, most of the villages get a score of 100 for surface water availability even during the dry season due to the way the score is calculated (Falkenmark Stress Index, based on simulated discharge). On the other hand, a number of villages exhibit water scarcity even during the wet season, as we can see from the figure. These villages are not considered as outliers for it seems that the distribution simply has a long tails without major gaps between score values. Water scarce villages are presented in Figure 5.4. the total number of these villages is 1388 (16.9% of all villages) in the dry and 318 (3.9%) in the wet season, all in areas of least seasonal precipitation. Precipitation variability difference is distinct between seasons as well as within wet season. Villages which score poorly on wet season precipitation are mostly located in the west and northwest of the country in provinces of Xayabouly, Vientiane, Lounag Prabang, Oudomxai, Phongsaly and Louang Namtha. Small region in the south at the border between Khammuane and Savannakhet score low as well. The last variable, average longest consecutive drought day (days with precipitation less than 1mm) sequence is again extremely different between seasons. In the wet season, all villages get a score of 100, while in the dry season the entire range is occupied. Highest score is found in the northwest of the country, where the dry season is broken often by rainy days. In the south, however, the dry period can extend on average to more than 100 days. Maps of variable scoring are provided in Appendix 2.
+
+```{r, message = FALSE, warning=FALSE}
+#RES
+# dry season
+temp <- as.data.frame(dryRESvar)
+colnames(temp) <- c('Dry Season \n Surface Availability','Dry Season \n Precipitation','Consecutive Drought Days') 
+temp <- melt(temp)
+
+p1 <- ggplot(data = temp, aes(variable, value, fill = factor(variable))) + geom_jitter(position=position_jitter(width=.6), aes(color=factor(variable)) ,pch='.') + geom_boxplot(outlier.shape=NA) + theme_bw() + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),legend.position="none",axis.text.x = element_text(angle = 45, hjust = 1)) + ggtitle('a) Dry Season RES')
+
+# wet season
+temp <- as.data.frame(cbind(wetRESvar, rep.int(100,8215)))
+colnames(temp) <- c('Wet Season \n Surface Availability','Wet Season \n Precipitation','Consecutive Drought Days') 
+temp <- melt(temp)
+
+p2 <- ggplot(data = temp, aes(variable, value, fill = factor(variable))) + geom_jitter(position=position_jitter(width=.6), aes(color=factor(variable)) ,pch='.') + geom_boxplot(outlier.shape=NA) + theme_bw() + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),legend.position="none",axis.text.x = element_text(angle = 45, hjust = 1)) + ggtitle('b) Wet Season RES') 
+
+grid.arrange(p1,p2,ncol=2)
+
+
+
+rm('temp','temp2','p1','p2')
+```
+**Figure 5.3. Resources component variability in a) dry and b) wet season. Hinges of the boxes signify 25% and 75% of the sample and whiskers cover 1.5 times the interquartile range.**
+
+
+```{r, message = FALSE}
+# plot villages with less than 100 score on surface water availability
+selection <- WPIdata$DryAvail < 100
+selection.f <- fortify(voronoi[selection,], region='ID')
+label <- paste("Province:", Provinces,"<br> District:", Districts,"<br> Village:", Villages, sep=" ")
+temp <- data.frame(WPIdata$wid, Villages, Districts, Provinces, label)
+colnames(temp)[1] <- c('id')
+temp2 <- merge(selection.f,temp[selection,], by='id')
+
+p1 <- ggplot(LaoAdmin1.f, aes(x = long, y = lat)) + geom_polygon(aes(group = group), colour = I("grey65"), size=0.2, fill = "white") + coord_equal() + geom_polygon_interactive(data=temp2, aes(x = long, y = lat,group=group, tooltip=label), fill="red") + theme_minimal() + ggtitle('a) Water Scarcity \n in the Dry Season') + theme(axis.title.x=element_blank(), axis.title.y=element_blank(), axis.ticks=element_blank(), axis.text.x=element_blank(), axis.text.y=element_blank())
+
+selection <- WPIdata$WetAvail < 100
+selection.f <- fortify(voronoi[selection,], region='ID')
+temp2 <- merge(selection.f,temp[selection,], by='id')
+
+p2 <- ggplot(LaoAdmin1.f, aes(x = long, y = lat)) + geom_polygon(aes(group = group), colour = I("grey65"), size=0.2, fill = "white") + coord_equal() + geom_polygon_interactive(data=temp2, aes(x = long, y = lat,group=group, tooltip=label), fill="orange") + theme_minimal() + ggtitle('b) Water Scarcity \n in the Wet Season') + theme(axis.title.x=element_blank(), axis.title.y=element_blank(), axis.ticks=element_blank(), axis.text.x=element_blank(), axis.text.y=element_blank())
+
+#grid.arrange(p1,p2,ncol=2)
+#p <- multiplot(p1,p2,cols=2)
+
+ggiraph(code=print(p1), zoom=5)
+ggiraph(code=print(p2), zoom=5)
+
+rm('selection','selection.f','p1','p2', 'temp','temp2')
+
+```
+**Figure 5.4. Villages with water scarcity (water availability score less than 100) in a) dry and b) wet seasons.**
+
+
+In addition to the box plots of the variables, their correlations were plotted in scatterplot matrices shown in Figure 5.5. The variables show only weak correlations among each other, which can be considered a desired property, according to Lawrence et al (2002). The dry season variable distributions are extremely skewed with the exception of drought days, which is approximately normally distributed. In the wet season, precipitation and soil water availability have a medium strenght correlation, as can be expected, however the scatterplot shows that the correlation is not uniform across the range. Surface water availability is extremely skewed, but the other two distributed variables (precipitation and soil water availability) are more evenly spread out through the range.  
+
+
+```{r, message = FALSE, warning=FALSE}
+temp <- as.data.frame(dryRESvar)
+colnames(temp) <- c('Dry Season \n Surface Availability','Dry Season \n Precipitation','Consecutive Drought Days') 
+p1 <- pairs(temp, pch='.', upper.panel = panel.cor, diag.panel = panel.hist, lower.panel = panel.smooth)
+
+temp <- as.data.frame(cbind(wetRESvar, rep.int(100,8215)))
+colnames(temp) <- c('Wet Season \n Surface Availability','Wet Season \n Precipitation','Consecutive Drought Days') 
+p2 <- pairs(temp, pch='.', upper.panel = panel.cor, diag.panel = panel.hist, lower.panel = panel.smooth)
+
+#grid.arrange(p1,p2,ncol=1, nrow=2)
+
+```
+**Figure 5.5. Scatterplot matrix for Resources component. The upper matrix is for dry season and the lower for wet season.** 
+
+
+Spatial autocorrelation was analyzed by calculating Moran’s I (Table 5.1) for all of the variables. From the seven analyzed variables (drought days for wet season were omitted because the score is 100, meaning there is zero autocorrelation), all show substantial spatial autocorrelation. This is visually evident when looking at maps of the variable scores, provided in Appendix 2. Precipitation for both seasons and drought days in the dry season appear extremely autocorrelated.
+
+
+**Table 5.1. Moran's I for Resource component variables.**
+
+```{r, message=FALSE,warning=FALSE}
+library(xtable)
+temp <- componentMoran2(dryRESvar, voronoi.nb.listw)
+temp2 <- componentMoran2(wetRESvar, voronoi.nb.listw)
+moranTable <- data.frame(rbind(temp, temp2))
+moranTable
+rm('temp','temp2','p1','p2', 'moranTable')
+
+```
+
+
+### 5.1.2	Access
+
+The Access component consists of three variables, which are identical for both, dry and wet season. Scores for all variables consist of steps, as can be seen from the box plot in Figure 5.6. Irrigation type scores are concentrated in the upper half of the range with only a handful of villages with scores below 50. Drinking water source and toilet type occupy the entire range with drinking water source centered around the score of 50 and toilet type skewed toward the lower half. 
+
+```{r, message=FALSE}
+#ACC
+temp <- as.data.frame(ACCvar)
+colnames(temp) <- c('Irrigation Type','Drinking Water \n Source','Toilet Type')
+temp <- melt(temp)
+
+ggplot(data = temp, aes(variable, value, fill = factor(variable))) + geom_jitter(position=position_jitter(width=.6), aes(color=factor(variable)) ,pch='.') + geom_boxplot(outlier.shape=NA) + theme_bw() + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),legend.position="none") + ggtitle('ACC')
+```
+
+
+**Figure 5.6. Access component variability. Hinges of the boxes signify 25% and 75% of the sample and whiskers cover 1.5 times the interquartile range.**
+
+
+The variables show only weak correlation with each other. Toilet type weakly correlates with both, drinking water source and irrigation type with correlation coefficients of 0.24 and 0.23 respectively. There is no correlation between irrigation type and drinking water source. Distribution are different for each of the variables. Irrigation type follows a Poisson distribution, while drinking water source follows a positively skewed normal distribution. Toilet type on the other hand exhibits two peaks in its distribution.
+
+Moran’s I was computed for all of the variables and shown in Table 5.2. All of the variables are spatially autocorrelated, however to a lower degree than the variables in Resources component. 
+
+
+**Table 5.2. Moran's I for Access component variables.**
+ 	
+```{r}
+temp <- componentMoran2(ACCvar, voronoi.nb.listw)
+temp
+
+```
+
+### 5.1.3	Capacity
+Four variables make out the Capacity component; travel time to (district + province) capitals, road access, literacy rate and incidence of poverty. The variables in this component are diverse and they occupy the entire range of index scores with small variations in the location and tails of the distribution. A box plot of the variables is shown in Figure 5.7. The variables all show similar pattern: high scores are found all along the Mekong River and where the landscape is generally flat. A clear trend is visual where the score gradually gets lower as distance from the Mekong increases. Interestingly, this pattern is visible in the travel time to administrative capitals as well: high scores are only found in small areas near the administrative capitals within the provinces located in the mountains. The low-lying areas near Mekong all score relatively high. Additionlly, similar pattern can be seen in road access. Road access is the only one of the four which is changing between the seasons, and the only one that does not occypy the entire score range. In the dry season there are 716 (8.7%) villages with no road access (score 0), while in the dry season the number increases to 2777 (33.8%). The villages without road access are shown in Figure 5.8. Scatterplot matrix in Figure 5.9 reveals that the variables appear correllated in a  considerably higher degree than the previous components of Access and Resources. Correlation between variables is not desirable, however, the scatterplot shows that while there is a medium strength correlation, the data points are spread out occupying the plot-space nearly entirely. The highest correlation can be found between literacy rate and incidence of poverty, which can be expected based on current knowledge of poverty. Travel time to capital correlates with literacy rate and poverty. This is also expected due the effect of better access to markets and education when a village is near an administrative capital. Surprisingly, road access does not have a strong correlation with travel time to capital. 
+
+```{r, message=FALSE}
+temp <- as.data.frame(dryCAPvar)
+colnames(temp) <- c('Travel Time to Capital','Road Access','Literacy Rate','Incidence of Poverty') 
+temp <- melt(temp)
+ggplot(data = temp, aes(variable, value, fill = factor(variable))) + geom_jitter(position=position_jitter(width=.6), aes(color=factor(variable)) ,pch='.') + geom_boxplot(outlier.shape=NA) + theme_bw() + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),legend.position="none") + ggtitle('Dry Season CAP')
+
+```
+
+
+ 
+**Figure 5.7. Capacity component variability for the dry season. Hinges of the boxes signify 25% and 75% of the sample and whiskers cover 1.5 times the interquartile range.**
+
+
+
+```{r, message = FALSE}
+# plot villages with less than 100 score on surface water availability
+selection <- WPIdata$DryRoad < 100
+selection.f <- fortify(voronoi[selection,], region='ID')
+label <- paste("Province:", Provinces,"<br> District:", Districts,"<br> Village:", Villages, sep=" ")
+temp <- data.frame(WPIdata$wid, Villages, Districts, Provinces, label)
+colnames(temp)[1] <- c('id')
+temp2 <- merge(selection.f,temp[selection,], by='id')
+
+p1 <- ggplot(LaoAdmin1.f, aes(x = long, y = lat)) + geom_polygon(aes(group = group), colour = I("grey65"), size=0.2, fill = "white") + coord_equal() + geom_polygon_interactive(data=temp2, aes(x = long, y = lat,group=group, tooltip=label), fill="red") + theme_minimal() + ggtitle('a) Villages without road access in the dry season') + theme(axis.title.x=element_blank(), axis.title.y=element_blank(), axis.ticks=element_blank(), axis.text.x=element_blank(), axis.text.y=element_blank())
+
+selection <- WPIdata$WetRoad < 100
+selection.f <- fortify(voronoi[selection,], region='ID')
+temp2 <- merge(selection.f,temp[selection,], by='id')
+
+p2 <- ggplot(LaoAdmin1.f, aes(x = long, y = lat)) + geom_polygon(aes(group = group), colour = I("grey65"), size=0.2, fill = "white") + coord_equal() + geom_polygon_interactive(data=temp2, aes(x = long, y = lat,group=group, tooltip=label), fill="orange") + theme_minimal() + ggtitle('b) Villages without road access in the wet season') + theme(axis.title.x=element_blank(), axis.title.y=element_blank(), axis.ticks=element_blank(), axis.text.x=element_blank(), axis.text.y=element_blank())
+
+#grid.arrange(p1,p2,ncol=2)
+#p <- multiplot(p1,p2,cols=2)
+
+ggiraph(code=print(p1), zoom=5)
+ggiraph(code=print(p2), zoom=5)
+
+rm('selection','selection.f','p1','p2', 'temp','temp2')
+```
+
+
+
+ 
+**Figure 5.8. Villages without road access in a) dry and b) wet season.**
+
+
+ 
+ 
+
+```{r}
+temp <- as.data.frame(dryCAPvar)
+colnames(temp) <- c('Travel Time to Capital','Road Access','Literacy Rate','Incidence of Poverty') 
+pairs(temp, pch='.', upper.panel = panel.cor, diag.panel = panel.hist, lower.panel = panel.smooth)
+```
+
+**Figure 5.9. Scatterplot matrix for dry season Capacity component.**
+
+Table 5.3 summarizes Moran’s I for the variables in Capacity component. Strong spatial autocorrelation can be found, unsurprisingly, in travel time to administrative capitals, literacy rate and the incidence of poverty. Likewise, road access is found to be autocorrelated and there is no significant difference between the seasons. 
+
+
+**Table 5.3. Moran's I for Capacity component variables.** 
+
+```{r}
+temp <- componentMoran2(dryCAPvar, voronoi.nb.listw)
+temp2 <- componentMoran2(wetCAPvar, voronoi.nb.listw)
+moranTable <- data.frame(rbind(temp, temp2))
+moranTable <- moranTable[-c(5,7,8),]
+moranTable
+```
+
+
+
+
+### 5.1.4	Use
+Use component is made up from three variables; irrigation rate, agricultural area per person and rate of population depending on agri- or aquaculture. The variables are shown in a box plot in Figure 5.10. All of the variables occupy the entire range, however, only the rate of population depending on water is centered around score 50. The other two variables are skewed towards the bottom half and irrigation rate nearly entirely below score of 50. The only component that changes between the seasons is the irrigation rate. The relationship between dry and wet season is shown in Figure 5.11. The figure shows that surprisingly there are a number of villages in which a larger share of crops are irrigated in the dry season than in the wet season. The distribution of villages that score high in irrigation is another surprise: They appear to be away from the lowlands near Mekong and in the areas with higher slopes. 
+
+ 
+ 
+**Figure 5.10. Use component variability for wet season.**
+```{r, message=FALSE}
+#USE
+temp <- as.data.frame(dryUSEvar)
+colnames(temp) <- c('Irrigation Rate','Agr. Area per Capita','Pop. Rate Depending on Water') 
+temp <- melt(temp)
+ggplot(data = temp, aes(variable, value, fill = factor(variable))) + geom_jitter(position=position_jitter(width=.6), aes(color=factor(variable)) ,pch='.') + geom_boxplot(outlier.shape=NA) + theme_bw() + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),legend.position="none") + ggtitle('Dry Season USE')
+
+```
+
+
+ 
+
+```{r, message=FALSE}
+# dry vs wet irrigation
+label <- paste("Province:", Provinces,"<br> District:", Districts,"<br> Village:", Villages,"<br> DryIrrigation", WPIdata$ShDryIrr,"<br> WetIrrigation",WPIdata$IrrAreaSh,  sep=" ")
+temp <- data.frame(WPIdata$IrrAreaSh, WPIdata$ShDryIrr, label)
+colnames(temp) <- c('WetIrrigation','DryIrrigation','label')
+p1 <- ggplot(data = temp) + geom_point_interactive(aes(WetIrrigation, DryIrrigation, tooltip=label)) + geom_abline(color='red') + theme_bw() + ggtitle('Seasonal Irrigation')
+temp <- melt(temp)
+p2 <- ggplot(data = temp, aes(variable, value, fill = factor(variable))) + geom_jitter(position=position_jitter(width=.6), aes(color=factor(variable)) ,pch='.') + geom_boxplot(outlier.shape=NA) + theme_bw() + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),legend.position="none") + ggtitle('Irrigation Scores')
+#multiplot(p1,p2, cols=2)
+
+ggiraph(code=print(p1))
+p2
+
+```
+
+
+**Figure 5.11. A scatterplot and a boxplot between wet and dry season irrigation.**
+
+Agricultural area per person scores generally low, however there are a few areas which seem to contain high amount of fields per person. These areas are the southern tip of Xayabouly, central and northern Louang Prabang, and the area near Mekong in Savannakhet, Saravane and Champasak. In Xayabouly, and in Champasak this area scores low on population depending on agri- or aquaculture for their main income. The pattern where this variable scores high and low is does not follow the geography of the country, with high and low scores found near and far from the major rivers and in an out of the mountainous areas. The variables show only weak correlations amongst each other with highest coefficient being 0.20. In addition, Moran’s I was analyzed and is summarized in Table 5.4. Medium strength spatial autocorrelation is found on all of the variables.
+
+Table 5.4. Moran's I for Use component variables.
+
+```{r}
+temp <- componentMoran2(dryUSEvar, voronoi.nb.listw)
+temp2 <- componentMoran2(wetUSEvar, voronoi.nb.listw)
+moranTable <- data.frame(rbind(temp, temp2))
+moranTable <- moranTable[-c(5,6),]
+moranTable
+```
+
+
+
+### 5.1.5	Environment
+Environment component consist of four variables; threatened amphibians, disaster occurrence, soil degradation and human footprint. Boxplot (Figure 5.12a) drawn from the variables clearly indicate that the first three variables are categorical ones. The scores for all of the variables are in the top half of the range, except Threatened Amphibians which occupies the entire score range. The only variable that changes between seasons is disaster occurrence; the difference is shown in Figure 5.12b. The change is not dramatic, however, the range of scores in wet season is wider and the overall score is on average better. This suggests that drought disasters are somewhat more frequent than floods and landslides. In fact, 67% of villages in the data experienced drought disasters when the same figure for floods and landslides are 32% and 14%. The vast majority of these villages also report frequent disasters, and in this statistic droughts have a higher representation than the wet season disasters as well. 
+
+ 
+```{r, message=FALSE}
+#dry season
+temp <- as.data.frame(dryENVvar)
+colnames(temp) <- c('Threatened \n Amphibians','Disasters','Soil \n Degradation','Human \n Footprint') 
+temp <- melt(temp)
+
+p1 <- ggplot(data = temp, aes(variable, value, fill = factor(variable))) + geom_jitter(position=position_jitter(width=.6), aes(color=factor(variable)) ,pch='.') + geom_boxplot(outlier.shape=NA) + theme_bw() + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),legend.position="none") + ggtitle('a) Dry Season ENV')
+
+# wet season
+temp <- as.data.frame(cbind(WPIdata$dryDisast, WPIdata$wetDisast))
+colnames(temp) <- c('Dry season \n disasters','Wet season \n disasters')
+temp <- melt(temp)
+
+p2 <- ggplot(data = temp, aes(variable, value, fill = factor(variable))) + geom_jitter(position=position_jitter(width=.6), aes(color=factor(variable)) ,pch='.') + geom_boxplot(outlier.shape=NA) + theme_bw() + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),legend.position="none") + ggtitle('b) Dry and Wet Season Disasters')
+
+multiplot(p1,p2,cols=2)
+
+```
+
+
+**Figure 5.12. a) Environment component variability for the dry season and b) disaster scoring difference between the seasons.**
+
+
+Villages score fairly high in the Environment variables with the exception of threatened amphibians. Scores lower than 50 are found in the northwest (Phongsaly, Oudomxai, Louangnamhta, Bokeo) and in the southeast (Xekong, Attapeu). A small region in Louangnamtha is assigned with 0 score. Disaster scores are on the better half of 50, with the highest scores found in the northwest and in Vientiane Capital and Vientiane Province. Southern part of the country score more uniformly at approximately 60-70, suggesting that a disasters occur at a higher rate than in the north. Soil degradation is random seems random where it exists, except for two distinct areas; the areas around mountainous Xekong-Saravane and southern Phonsaly-northern Oudomxai. Human Footprint clearly shows where the population live in Laos, with a highligh on the low score of the capital city. However, the score is fairly high due to low amount of population leaving large areas relatively wild.
+
+The variables are not correlated with each other, with the maximum coefficient being 0.26 between human footprint and threatened amphibians. As with the previous components, Moran’s I was calculated for each variable and is presented in Table 5.5. Human Footprint and Threatened Amphibians are extremely strongly clustered in the data. The extremely high value for Threatened Amphibians is due to the data being aggregated to river basins, which create large areas of similar values while neighbouring river basins likewise are assigned by a single value. The weakest spatial autocorrelation for all variables in all components, are found in the disaster occurrences and soil degradation. Regardless of showing the lowest degree of spatial relationship in the data used, Moran’s I for these variables is approximately 0.3 – commonly interpreted as a strong spatial autocorrelation (Getis, 2010). This means that all variables, despite being described as weak earlier in the text (they are weak only in the relative context of this study), show strong spatial dependence. This partly answers to the first research question on spatial differences in water poverty. At this point we knowfor certain that the indicators do vary spatially beyond doubt. The next section explores the actual Water Poverty Index to find a definite answer to the question.
+
+
+**Table 5.5. Moran's I for Environment component variables. **
+
+```{r}
+temp <- componentMoran2(dryENVvar, voronoi.nb.listw)
+temp2 <- componentMoran2(wetENVvar, voronoi.nb.listw)
+moranTable <- data.frame(rbind(temp, temp2[2,]))
+moranTable
+```
+
+
+

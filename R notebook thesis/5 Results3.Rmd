@@ -1,0 +1,386 @@
+---
+title: "5 Results"
+output: html_notebook
+---
+
+## 5.3	Seasonal Water Poverty
+The third section of Results chapter looks at the question whether there are significant inter-annual differences in water poverty by first examining weighting schemes that could be derived from a PCA. The two seasonal WPI’s are then compared to determine the answer to the second research question: ”Are there distinct spatio-temporal differ-ences in water poverty?”
+
+
+### 5.3.1	Weighting Schemes
+Principal Component Analysis was used to derive an objective weighting scheme, as suggested by Jemmali and Matoussi (2013). PCA was applied to the wet and dry season components separately as well as using data from both seasons combined. The reason for this is that performing PCA on dry and wet season separately will not yield a weighting scheme that can be compared. Instead, they only measure the variability of the data within the season. The weighting schemes derived using all 5 Principal Components (PC) are shown in Table 5.6.
+
+
+**Table 5.6. Objective weights for the components derived using Principal Component Analysis.**
+Component	Dry	Wet	Both
+RES	20%	12%	27%
+ACC	16%	24%	7%
+CAP	7%	14%	14%
+USE	11%	16%	12%
+ENV	46%	34%	40%
+
+
+The single-season weighting schemes are close with minor differences. Resources com-ponent is assigned a higher weight in the dry season than in the wet season, suggesting a higher overall variability in the dry season (which is logical, looking at Figure 5.3 on page 36). Environment is the heaviest component for both, dry and wet seasons by a large margin. In the dry season, Access, Capacity and Use are given very low weights. In the wet season, importance of Environment and Resources are reduced in favor of the ”human” components of WPI. Resources component (the physical availability of water) becomes is the least important component in the wet season. This is attributed to the fact that, for the low population, there is ample of water present even during the dry season. The picture changes when both seasons are used to derive the weighting scheme: Environment and Resources together weight nearly 70% of the overall weights. Access, which does not vary between seasons, is assigned a very low weight of only 7% and Capacity and Use 14% and 12%, respectively. Looking at all of these together, differ-ences in water poverty in the dry season are due to environmental factors, and in the wet season due to the human factors.
+
+```{r, message = FALSE}
+######################
+
+# Prepare required libraries, functions and data
+
+######################
+
+######### Load required libraries 
+library(rgdal)
+library(sp)
+library(GISTools)
+library(spdep)
+library(ggplot2)
+library(gridExtra)
+library(raster)
+library(deldir)
+library(GWmodel)
+library(spgwr)
+library(classInt)
+library(DescTools)
+library(reshape)
+library(cluster)
+library(plotly)
+library(ggiraph)
+
+####################################################################
+####################### Load data 
+####################################################################
+
+load("BG.RData")
+
+```
+
+```{r, warning=FALSE, message=FALSE}
+###################################################
+
+# Perform PCA again for Both season
+colnames(dryWPIcomp) <- c('WPI','RES','ACC','CAP','USE','ENV')
+colnames(wetWPIcomp) <- c('WPI','RES','ACC','CAP','USE','ENV')
+temp <- rbind(dryWPIcomp[,2:6], wetWPIcomp[,2:6])
+PCA <- prcomp(temp, scale=F) # no scaling - the components are already scaled 0-100
+
+##### Plot loadings dumbell
+varnames <- c('RES','ACC','CAP','USE','ENV')
+loadings1 <- data.frame(cbind(varnames,as.numeric(PCA$rotation[,1])))
+loadings1[,2] <- as.numeric(PCA$rotation[,1])
+loadings2 <- data.frame(cbind(varnames,as.numeric(PCA$rotation[,2])))
+loadings2[,2] <- as.numeric(PCA$rotation[,2])
+loadings3 <- data.frame(cbind(varnames,as.numeric(PCA$rotation[,3])))
+loadings3[,2] <- as.numeric(PCA$rotation[,3])
+
+
+temp <- rbind(data.frame(id="PC1", loadings1), data.frame(id="PC2", loadings2), data.frame(id="PC3", loadings3) )
+colnames(temp) <- c('id','Component', 'Load')
+
+p <- ggplot(temp, aes(colour=id)) + geom_point(aes(Load, Component), size=1) + geom_segment(aes(x = 0, xend = Load, y = Component, yend=Component)) + ggtitle('Variable Loadings') + theme_minimal() + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),legend.position="none") + facet_wrap( ~ id, ncol=3)
+
+ggplotly(p)
+
+rm('PCA','varnames','loadings1','loadings2','loadings3','p','temp')
+
+```
+
+ 
+**Figure 5.19. Loadings of the first three principal components from scheme using data from both seasons.**
+
+
+Figure 5.19 presents the loadings of the first three principal components from the scheme including both seasons. From the first PC we can see that the largest variability in the dataset is represented by Resources gaining a medium strength positive loading and Capacity given a very strong negative loading, representing areas with high re-sources availability and low capacity. In the second PC, Resources is assigned with a very strong negative loading in the second PC with Capacity again assigned a medium strength negative loading. As a contrast to the first one, the second PC represents poor areas with low resources, low capacity and with high amount of people dependent on the resource. All of the loadings are negative, suggesting that the second PC could be characterized as the ”poor PC”. The third component represents nearly entirely Use component, which is given maximum negative loading.
+
+WPI calculated with the objective schemes is presented in Figure 5.20. There is only a small difference between the single-season PCA weightings. This is largely due to the smaller weight of RES in the wet season weights and a higher weight in ACC, which is identical to both of the seasons. However, major differences are evident when both sea-sons are used together to determine the objective weights. The distribution of areas of high and low water poverty are similar between wet and dry season, regardless of weighting scheme. Areas near the Mekong and Thai border, in general, score high on WPI while the remote mountainous areas near Vietnamese border and in the north score low. The distribution of index values has a wide peak at 8-10 Index points in favor of wet season with mean and median of approximately 8.8. There is a long tail on the high-er-difference side.
+
+```{r, fig.width=12}
+###### comparison // GGPLOT2
+temp <- data.frame(WPIdata$wid, WPIdata$dryWPIsinglegpca, WPIdata$wetWPIsinglegpca, WPIdata$dryWPIgpca, WPIdata$wetWPIgpca)
+colnames(temp) <- c('id','SingleDry','SingleWet','BothDry','BothWet')
+temp2 <- merge(voronoi.f,temp, by='id')
+
+map1 <- ggplot(temp2, aes(x = long, y = lat, fill = SingleDry)) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + scale_fill_gradient2(low="#d73027", mid="#ffffbf", high="#1a9850", midpoint=50) + theme_bw()
+map1 <- map1 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('a) Dry season - single') + theme(rect=element_blank(), line=element_blank(), axis.text.x = element_blank(), axis.text.y=element_blank(),axis.title.x=element_blank(), axis.title.y=element_blank())
+
+map2 <- ggplot(temp2, aes(x = long, y = lat, fill = SingleWet)) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + scale_fill_gradient2(low="#d73027", mid="#ffffbf", high="#1a9850", midpoint=50) + theme_bw()
+map2 <- map2 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('b) Wet season - single') + theme(rect=element_blank(), line=element_blank(), axis.text.x = element_blank(), axis.text.y=element_blank(),axis.title.x=element_blank(), axis.title.y=element_blank())
+
+map3 <- ggplot(temp2, aes(x = long, y = lat, fill = BothDry)) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + scale_fill_gradient2(low="#f1a340", mid="#ffffbf", high="#998ec3", midpoint=50) + theme_bw()
+map3 <- map3 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('c) Dry season - both') + theme(rect=element_blank(), line=element_blank(), axis.text.x = element_blank(), axis.text.y=element_blank(),axis.title.x=element_blank(), axis.title.y=element_blank())
+
+map4 <- ggplot(temp2, aes(x = long, y = lat, fill = BothWet)) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + scale_fill_gradient2(low="#f1a340", mid="#ffffbf", high="#998ec3", midpoint=50) + theme_bw()
+map4 <- map4 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('d) Wet season - both') + theme(rect=element_blank(), line=element_blank(), axis.text.x = element_blank(), axis.text.y=element_blank(),axis.title.x=element_blank(), axis.title.y=element_blank())
+
+multiplot(map1,map3, cols=2)
+multiplot(map2,map4, cols=2)
+rm('map1','map3','map2','map4')
+```
+
+ 
+**Figure 5.20. WPI calculated from the three objective weighting schemes: a) dry season WPI with weights derived from dry season only, b) wet season WPI from weights derived from wet season only, c) dry season WPI from weights derived using both seasons, and d) wet season WPI from weights derived using both seasons.**
+
+
+The difference between single-season and both-seasons weighting schemes is presented in Figure 5.21. During the dry season, both-season weighting gives lower WPI score to the villages than using a single-season scheme. The effect is opposite in the wet season where both-season scheme results in higher WPI values. Both of these apply to the en-tire country, however, the amount of difference varies location by location. This effect is due to the weighting differences shown in Table 5.6. To summarize, comparing the weighting schemes suggest that the relationship between components differ according to the season, providing the first evidence that there is a difference between season. This is also the first evidence towards the research question about the drivers of water pov-erty; environmental conditions and resource availability being more important in the dry season and the human components in the wet season.
+
+```{r, fig.width=12}
+temp <- data.frame(WPIdata$wid, WPIdata$dryWPIsinglegpca, WPIdata$wetWPIsinglegpca, WPIdata$dryWPIgpca, WPIdata$wetWPIgpca)
+colnames(temp) <- c('id','SingleDry','SingleWet','BothDry','BothWet')
+temp2 <- merge(voronoi.f,temp, by='id')
+
+map1 <- ggplot(temp2, aes(x = long, y = lat, fill = (BothDry-SingleDry))) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + scale_fill_gradient2(low="#b35806", mid="#f7f7f7", high="#542788", name='WPI difference') + theme_bw()
+map1 <- map1 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('a) Dry season difference between weighting schemes') + theme(rect=element_blank(), line=element_blank(), axis.text.x = element_blank(), axis.text.y=element_blank(),axis.title.x=element_blank(), axis.title.y=element_blank())
+
+map2 <- ggplot(temp2, aes(x = long, y = lat, fill = (BothWet-SingleWet))) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + scale_fill_gradient2(low="#b35806", mid="#f7f7f7", high="#542788", name='WPI difference') + theme_bw()
+map2 <- map2 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('b) Wet season difference between weighting schemes') + theme(rect=element_blank(), line=element_blank(), axis.text.x = element_blank(), axis.text.y=element_blank(),axis.title.x=element_blank(), axis.title.y=element_blank())
+
+multiplot(map1,map2,cols=2)
+
+rm('map1','map2')
+```
+
+
+**Figure 5.21. WPI difference between single-season and both-seasons weighting schemes. Calculated by subtracting single-season weighted WPI from the both-season weighted WPI.**
+
+
+### 5.3.2	Difference in Seasonal Index Scores
+The degree in which dry and wet season WPI differs varies substantially across the country. The difference is presented in Figure 5.22. As a rule of thumb, areas where overall wet season WPI is high, the difference between seasons is also high. To put it in other words, low WPI score in the dry season generally coincide with low increase in WPI towards the wet season. What this means is that wet season does not substantially improve the water poverty situation in water poor areas, but instead, the difference be-tween the better- and worse-off areas is growing with the arrival of rain.  Figure 5.23a presents a dumbell plot which aggregates the seasonal differences in to provincial aver-ages. The plot seems to confirm that, the four provinces at the bottom are the poorest in both seasons. In addition, the three provinces in the bottom, Xekong, Phongsaly and Oudomxai are the provinces in which WPI score increases the least in the wet season.  The plot also shows that two provinces, Vientiane Province and Xayabouly, stand out as the increase in WPI in wet season is markedly higher than in the other provinces. This difference suggests that there is a more extreme seasonality in these provinces compared to all other provinces in Laos. 
+
+Figure 5.23 presents a dumbell plot from the perspective of relative ranks. The differ-ence in the relative rank is not as dramatic as using index value, however, it provides insight in the season differences. 9 out of 17 provinces fall in their relative rank towards the wet season. Notable is that some of the poorest provinces, namely Phongsaly, Oudomxai and Louangnamtha drop in rank by a significant amount in the wet season. These provinces are all located in the northwestern corner of Laos. This provides addi-tional evidence that, in the North, the inter-annual difference in precipitation and water resource availability is much more stable than in the south where Xekong is located. 
+
+```{r}
+temp <- data.frame(WPIdata$wid, WPIdata$dryWPIsinglegpca, WPIdata$wetWPIsinglegpca, WPIdata$dryWPIgpca, WPIdata$wetWPIgpca)
+colnames(temp) <- c('id','SingleDry','SingleWet','BothDry','BothWet')
+temp2 <- merge(voronoi.f,temp, by='id')
+
+map1 <- ggplot(temp2, aes(x = long, y = lat, fill = (BothWet-BothDry))) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + scale_fill_gradient2(low="#b35806", mid="#ffffbf", high="#542788", name='WPI difference') + theme_bw()
+map1 <- map1 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('Difference between seasonal WPI') + theme(rect=element_blank(), line=element_blank(), axis.text.x = element_blank(), axis.text.y=element_blank(),axis.title.x=element_blank(), axis.title.y=element_blank())
+
+map1
+rm('map1','temp','temp2')
+```
+
+ 
+**Figure 5.22. Difference between wet and dry season WPI. Calculated by subtracting dry season from the wet season WPI (both seasons weighting).**
+
+
+The extreme increase in WPI in the provinces of Xayabouly and Vientiane (and Houa-phan) is further confirmed by plotting the localized mean WPI for the entire country (see Figure 5.24a and Figure 5.24b). Areas within Xayabouly and Vientiane have low dry season WPI score while having a high wet season WPI. The same applies to Houa-phan to a slighty lower degree. We can also visually confirm the low increase in WPI in the provinces of Xekong and Phongsaly. There are villages in Xekong (in the Southeast) which remain in the lowest class even during the wet season, however, the area is ex-tremely remote with very little population. Phongsaly is located in the other extreme of the country, however the situation is very similar there as it similar to the Xekong. Southern part of Oudomxai near the bordering provinces of Xayabouly and Bokeo also stands out with high water poverty during both seasons.
+
+
+```{r}
+####### WPI per province
+
+#plot village numbers per province
+temp <- table(WPIdata$bcne)
+temp <- as.data.frame(temp)
+tempnames <- as.character(temp[,"Var1"])
+provinceWPI <- vector()
+for (i in 1:length(tempnames)) {
+	temppro <- tempnames[i]
+	tempdry <- WPIdata$dryWPIgpca[WPIdata$bcne==temppro]
+	tempwet <- WPIdata$wetWPIgpca[WPIdata$bcne==temppro]
+	dryrank <- rank(WPIdata$dryWPIgpca)[WPIdata$bcne==temppro]
+	wetrank <- rank(WPIdata$wetWPIgpca)[WPIdata$bcne==temppro]
+	
+	provinceWPI <- rbind(provinceWPI, c(as.character(temppro), as.numeric(round(mean(tempdry),1)), as.numeric(round(mean(tempwet),1)), as.numeric(round(mean(dryrank),1)), as.numeric(round(mean(wetrank),1))))
+}
+provinceWPI <- as.data.frame(provinceWPI)
+colnames(provinceWPI) <- c('Province','DryWPI','WetWPI','DryRank','WetRank')
+#sort
+provinceWPI$Province <- factor(provinceWPI$Province, levels = provinceWPI$Province[order(provinceWPI$WetWPI)])
+
+rm('temp','tempnames','temppro','tempdry','tempwet','dryrank','wetrank')
+p1 <- ggplot(provinceWPI, aes(x = Province, xend=Province, y = DryWPI, yend=WetWPI, fill=Province)) + geom_segment() + geom_point(aes(x=Province, y=DryWPI, color='blue'), size=1.5) + geom_point(aes(x=Province, y=WetWPI, color='red'), size=1.5) + ggtitle('a) Seasonal WPI differences') + theme_bw() + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),legend.position="none",axis.text.x = element_text(angle = 45, hjust = 1)) + labs(y= 'WPI', x='')
+
+#sort
+provinceWPI$Province <- factor(provinceWPI$Province, levels = provinceWPI$Province[order(provinceWPI$WetRank)])
+p2 <- ggplot(provinceWPI, aes(x = Province, xend=Province, y = DryRank, yend=WetRank, fill=Province)) + geom_segment() + geom_point(aes(x=Province, y=DryRank, color='blue'), size=1.5) + geom_point(aes(x=Province, y=WetRank, color='red'), size=1.5) + ggtitle('b) Seasonal Rank differences') + theme_bw() + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),legend.position="none",axis.text.x = element_text(angle = 45, hjust = 1)) + labs(y= 'WPI', x='')
+
+p <- ggplotly(p1)
+p
+
+p<- ggplotly(p2)
+p
+
+rm('p1','p2', 'p')
+
+
+```
+
+ 
+**Figure 5.23. Mean provincial a) WPI and b) WPI rank for dry and wet seasons. The provinces are ordered according to the wet season.**
+
+In addition to the local mean, Figure 5.24 presents the local standard deviation for WPI. Some very interesting observations can be made from the maps. For instance, it becomes clear that in the areas that, consistently, where water poverty is low (WPI value high), standard deviation is low.  In practise, although there are large differences between in-dividual villages, the areas with high WPI are fairly uniform in their situation. However, areas with low WPI exhibit large variation in the local water poverty. This can be illus-trated with the example of the two provinces with the largest difference between sea-sons; Vientiane Province and Xayabouly. In the dry season, overall WPI is low (be-tween 52 and 55), and standard deviation between 7 and going in places above 13. This means that there are villages in the region ranging from extremely water poor to villages with very low water poverty rates. In Xekong and Phongsaly, the poorest of provinces in both seasons, variation is likewise extreme. Oudomxai shows up as an anomaly in this sense, since there is an area with low WPI and low standard deviation. For the wet sea-son, the same rule of high WPI and low standard deviation applies, however there is somewhat larger variation in it. Houaphan sticks out as having a high WPI in the wet season accompanied with a high variation.
+
+```{r, message=FALSE, warning=FALSE}
+load("GWSS.RData")
+
+# Plot
+ux <- unique(s.grid@coords[,1])
+uy <- unique(s.grid@coords[,2])
+par(mfrow=c(1,2), mar=c(1,1,1,1))
+
+############ Local mean
+breaks <- classIntervals(c(dryWPI_gwss_400NN_comp$SDF$dryWPIgpca_LM, wetWPI_gwss_400NN_comp$SDF$wetWPIgpca_LM), n=5, style='quantile')
+colours <- brewer.pal(6, 'Purples')
+# dry LM
+predmat <- matrix(dryWPI_gwss_400NN_comp$SDF$dryWPIgpca_LM, length(ux), length(uy) )
+plot(LaoAdmin0, border=NA, col=NA)
+.filled.contour(ux,uy, predmat, col=colours, levels=round(c(0,breaks$brks[1:5],100), digits=1) )
+plotBG()
+sh <- shading(breaks=round(breaks$brks[1:5], digits=1), cols=colours)
+choro.legend(px='bottomleft', sh=sh, bg='white')
+title("a) Dry season WPI; GW Mean")
+# wet LM
+predmat <- matrix(wetWPI_gwss_400NN_comp$SDF$wetWPIgpca_LM, length(ux), length(uy) )
+plot(LaoAdmin0, border=NA, col=NA)
+.filled.contour(ux,uy, predmat, col=colours, levels=round(c(0,breaks$brks[1:5],100), digits=1))
+plotBG()
+sh <- shading(breaks=round(breaks$brks[1:5], digits=1), cols=colours)
+choro.legend(px='bottomleft', sh=sh, bg='white')
+title("b) Wet season WPI; GW Mean")
+
+######### Standard deviation
+breaks <- classIntervals(c(dryWPI_gwss_400NN_comp$SDF$dryWPIgpca_LSD, wetWPI_gwss_400NN_comp$SDF$wetWPIgpca_LSD), n=5, style='quantile')
+colours <- brewer.pal(7, 'Reds')
+# dry LM
+predmat <- matrix(dryWPI_gwss_400NN_comp$SDF$dryWPIgpca_LSD, length(ux), length(uy) )
+plot(LaoAdmin0, border=NA, col=NA)
+.filled.contour(ux,uy, predmat, col=colours, levels=round(c(0,breaks$brks[1:5],100), digits=1) )
+plotBG()
+sh <- shading(breaks=round(breaks$brks[1:5], digits=1), cols=colours)
+choro.legend(px='bottomleft', sh=sh, bg='white')
+title("c) Dry season WPI; Standard Deviation")
+# wet LM
+predmat <- matrix(wetWPI_gwss_400NN_comp$SDF$wetWPIgpca_LSD, length(ux), length(uy) )
+plot(LaoAdmin0, border=NA, col=NA)
+.filled.contour(ux,uy, predmat, col=colours, levels=round(c(0,breaks$brks[1:5],100), digits=1))
+plotBG()
+sh <- shading(breaks=round(breaks$brks[1:5], digits=1), cols=colours)
+choro.legend(px='bottomleft', sh=sh, bg='white')
+title("d) Wet season WPI; Standard Deviation")
+
+```
+
+ 
+ 
+**Figure 5.24. Local mean WPI and local standard deviation for dry and wet season. Bandwidth for the calculation is 400 nearest neighbours using Gaussian weighting scheme.**
+
+
+The relationship of village level dry and wet season WPI is plotted in a scatterplot in Figure 5.25. From the plot it is evident that majority of the villages in Laos fall in the better half of the plot range and that extremely poor villages are in the minority. Inter-estingly the plot tells us that there are a number of villages with dry season WPI higher than in the wet season. These are mostly located in the northwest with 71 villages in Oudomxai, 69 in Phongsaly, 41 in Louangphabang and 26 in Louangnamtha. This can be explained by a lower degree of variability in the Resources component and a high number of villages with only dry season road access. For Oudomxai this means that 15% of the villages in the province are better off, water poverty wise, in the dry season. For Phongsaly the same figure is 13%. This is potentially a significant find. 
+
+
+
+
+```{r}
+
+temp <- as.data.frame(cbind(as.data.frame(WPIdata$dryWPIgpca), as.data.frame(WPIdata$wetWPIgpca), as.factor(WPIdata$bcne), as.factor(WPIdata$tcne),as.factor(WPIdata$tcne)))
+colnames(temp) <- c('Dry_WPI', 'Wet_WPI','Province','District','Village')
+ggplot(data = temp, aes(Wet_WPI, Dry_WPI)) + geom_point(size=0.3) + geom_smooth(aes(color="Smooth trend")) + geom_abline(aes(colour='Equal WPI', slope=1, intercept=0), size=1) + theme_bw() + ggtitle('Relationship between dry and wet season WPI') +  scale_colour_manual("Legend",values=c("red","blue")) + scale_linetype_manual("Legend",values=c(1,1))
+
+
+```
+
+
+ 
+**Figure 5.25. Scatterplot of the WPI between wet and dry seasons.**
+
+
+Local correlations show that, despite USE component has a low weight in computing WPI, it correlates highly with overall WPI score. The strength of correlation in both sea-sons are approximately 0.65. Weak correlation can also be found in Resources and Ca-pacity in the dry season with coefficients of 0.36 and 0.31 respectively. In the wet sea-son correlation between CAP and WPI strengthens into 0.51. Resources and WPI no longer correlate, but it is replaced by Environment with a coefficient of 0.31. None of the correlations between the components of WPI are not significant. All of the distribu-tions are approximately normal. The correlations between components are summarized in Table 5.7. 
+
+
+**Table 5.7. Mean local correlations between seasonal WPI and their corresponding components.**
+ 	DryRES	DryACC	DryCAP	DryUSE	DryENV
+DryWPI	0.36	0.15	0.31	0.64	0.21
+DryRES	NA	0.00	-0.02	-0.02	-0.08
+DryACC	NA	NA	0.17	0.03	-0.03
+DryCAP	NA	NA	NA	0.03	-0.10
+DryUSE	NA	NA	NA	NA	0.02
+ 	WetRES	WetACC	WetCAP	WetUSE	WetENV
+WetWPI	0.16	0.21	0.51	0.67	0.31
+WetRES	NA	0.05	-0.02	0.02	0.00
+WetACC	NA	NA	0.16	0.01	-0.03
+WetCAP	NA	NA	NA	0.08	-0.07
+WetUSE	NA	NA	NA	NA	0.01
+
+In addition, selected components’ local correlations are plotted in Figure 5.26. These show interesting patterns; for the dry season (Figure 5.26a, Figure 5.26b and Figure 5.26c), Resources strongly correlates with WPI in the north and a few places in the south. Capacity strongly correlates with some of the most poor regions (Xekong, Phong-saly), but some not (Oudomxai, Louangnamtha). Weaker correlation is found in the more water rich regions. Use correlates very strongly in the south and in Houaphan Province, albeit the correlation is significant across the entire country. There is an inter-esting interplay between correlations of RES and USE in the north; a clear line is drawn southwards along the border of Houaphan and Louangprabang. Houaphan side corre-lates strongly with USE and the west side correlates with RES.
+
+For the wet season the picture looks rather different. Capacity seems to correlate with the water-poor areas, while in the water-rich regions correlation is low. Use, on the other hand behaves in the opposite way, although some poor areas are also correlating. The last significant component, Environment, behaves in a more random way with clear re-gions of high and low correlations among both, water-poor and water-rich areas.
+
+
+```{r, message=FALSE, warning=FALSE}
+
+par(mfrow=c(1,3), mar=c(1,1,1,1))
+# Dry season
+# RES
+breaks <- classIntervals(dryWPI_gwss_400NN_comp$SDF@data[,46], n=5, style='quantile')
+colours <- brewer.pal(5, 'Blues')
+predmat <- matrix(dryWPI_gwss_400NN_comp$SDF@data[,46]+1, length(ux), length(uy) )
+plot(LaoAdmin0, border=NA, col=NA)
+.filled.contour(ux,uy, predmat, col=colours, levels=round(c(0,breaks$brks[2:5]+1,100), digits=3) )
+plotBG()
+sh <- shading(breaks=round(breaks$brks[2:5], digits=3), cols=colours)
+choro.legend(px='bottomleft', sh=sh, bg='white')
+title("a) DryWPI vs DryRES")
+# CAP
+breaks <- classIntervals(dryWPI_gwss_400NN_comp$SDF@data[,48], n=5, style='quantile')
+colours <- brewer.pal(5, 'Purples')
+predmat <- matrix(dryWPI_gwss_400NN_comp$SDF@data[,48]+1, length(ux), length(uy) )
+plot(LaoAdmin0, border=NA, col=NA)
+.filled.contour(ux,uy, predmat, col=colours, levels=round(c(0,breaks$brks[2:5]+1,100), digits=3) )
+plotBG()
+sh <- shading(breaks=round(breaks$brks[2:5], digits=3), cols=colours)
+choro.legend(px='bottomleft', sh=sh, bg='white')
+title("b) DryWPI vs. DryCAP")
+# USE
+breaks <- classIntervals(dryWPI_gwss_400NN_comp$SDF@data[,49], n=5, style='quantile')
+colours <- brewer.pal(5, 'Oranges')
+predmat <- matrix(dryWPI_gwss_400NN_comp$SDF@data[,49]+1, length(ux), length(uy) )
+plot(LaoAdmin0, border=NA, col=NA)
+.filled.contour(ux,uy, predmat, col=colours, levels=round(c(0,breaks$brks[2:5]+1,100), digits=3))
+plotBG()
+sh <- shading(breaks=round(breaks$brks[2:5], digits=3), cols=colours)
+choro.legend(px='bottomleft', sh=sh, bg='white')
+title("c) DryWPI vs. DryUSE")
+
+# Wet season
+# RES
+breaks <- classIntervals(wetWPI_gwss_400NN_comp$SDF@data[,48], n=5, style='quantile')
+colours <- brewer.pal(5, 'Purples')
+predmat <- matrix(wetWPI_gwss_400NN_comp$SDF@data[,48]+1, length(ux), length(uy) )
+plot(LaoAdmin0, border=NA, col=NA)
+.filled.contour(ux,uy, predmat, col=colours, levels=round(c(0,breaks$brks[2:5]+1,100), digits=3) )
+plotBG()
+sh <- shading(breaks=round(breaks$brks[2:5], digits=3), cols=colours)
+choro.legend(px='bottomleft', sh=sh, bg='white')
+title("d) WetWPI vs WetCAP")
+# USE
+breaks <- classIntervals(wetWPI_gwss_400NN_comp$SDF@data[,49], n=5, style='quantile')
+colours <- brewer.pal(5, 'Oranges')
+predmat <- matrix(wetWPI_gwss_400NN_comp$SDF@data[,49]+1, length(ux), length(uy) )
+plot(LaoAdmin0, border=NA, col=NA)
+.filled.contour(ux,uy, predmat, col=colours, levels=round(c(0,breaks$brks[2:5]+1,100), digits=3))
+plotBG()
+sh <- shading(breaks=round(breaks$brks[2:5], digits=3), cols=colours)
+choro.legend(px='bottomleft', sh=sh, bg='white')
+title("e) WetWPI vs. WetUSE")
+# CAP
+breaks <- classIntervals(wetWPI_gwss_400NN_comp$SDF@data[,50], n=5, style='quantile')
+colours <- brewer.pal(5, 'Greys')
+predmat <- matrix(wetWPI_gwss_400NN_comp$SDF@data[,50]+1, length(ux), length(uy) )
+plot(LaoAdmin0, border=NA, col=NA)
+.filled.contour(ux,uy, predmat, col=colours, levels=round(c(0,breaks$brks[2:5]+1,100), digits=3) )
+plotBG()
+sh <- shading(breaks=round(breaks$brks[2:5], digits=3), cols=colours)
+choro.legend(px='bottomleft', sh=sh, bg='white')
+title("f) WetWPI vs. WetENV")
+
+
+```
+
+ 
+ 
+**Figure 5.26. Local correlations for the components which (on average) significantly correlate with seasonal WPI's. Dry season WPI correlates with a) RES, b) CAP and c) USE. Wet season correlates with d) CAP, e) USE and f) ENV.**
+
+
+
+Pairwise t-test result in high confidence in the conclusion that there is a statistical differ-ence between wet and dry season WPI. The investigations have provided ample evi-dence that there is a significant difference in dry and wet season water poverty, giving a confirming answer to the second research question: ”Are there distinct spatio-temporal differences in water poverty?” The investigation now proceeds to determining what are the causes that drive water poverty.
