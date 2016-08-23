@@ -1,0 +1,287 @@
+---
+title: "5 Results"
+output: html_notebook
+---
+
+### 5.4.2	Geographically Weighted Principal Component Analysis
+GWPCA was performed using an adaptive bandwidth of 400 nearest neighbours, which is equal to the bandwidth used for GWSS and very close to the optimal bandwidth for GWR. Following the suggestions in Charlton et al (2010) and Demsar et al (2013), the ”winning variable”, meaning the variable with the highest loading, for the three first principal components for dry season were plotted in Figure 5.30. In the first PC, Capaci-ty is the most loaded variable for most of the country, and mostly in the areas that were identified as poor in the cluster analysis. Rich areas are loaded highest with Use, with the exception of Bolikhamxai. Interestingly, provinces of Vientiane and Xayabouli are the only major areas loaded with Resources. The second PC is more varied. Majority of the areas that were loaded with Capacity in the first PC, are loaded with Use in the sec-ond PC. The areas determined as rich in the cluster analysis are mostly divided between Access and Capacity and some areas in the Poor North are loaded with Resources. In the third PC, Access dominates while the rest of the components are more or less evenly loaded. Environment is the winning variable in some of the most water poor areas (Xekong, Phongsaly). Use is the most loaded in Bolikhamxai (the province with least water poverty), and in the northwestern provinces of Oudomxai and Louangnamtha. In addition, it is the most important variable in the southwestern tip of Xayabouly. 
+
+
+```{r}
+######################
+
+# Prepare required libraries, functions and data
+
+######################
+
+######### Load required libraries 
+library(rgdal)
+library(sp)
+library(GISTools)
+library(spdep)
+library(ggplot2)
+library(gridExtra)
+library(raster)
+library(deldir)
+library(GWmodel)
+library(spgwr)
+library(classInt)
+library(DescTools)
+library(reshape)
+library(cluster)
+library(plotly)
+library(ggiraph)
+
+####################################################################
+####################### Load data 
+####################################################################
+
+load("BG.RData")
+load("GWPCA.RData")
+
+```
+
+```{r}
+################## PLOT lead items for components
+############# dry season
+# plot lead item
+local.loadings1 <- dryWPI_gwpca_400NN_comp$loadings[,,1] 
+local.loadings2 <- dryWPI_gwpca_400NN_comp$loadings[,,2]
+local.loadings3 <- dryWPI_gwpca_400NN_comp$loadings[,,3]
+lead.item1 <- colnames(local.loadings1)[max.col(abs(local.loadings1))]
+lead.item2 <- colnames(local.loadings2)[max.col(abs(local.loadings2))]
+lead.item3 <- colnames(local.loadings3)[max.col(abs(local.loadings3))]
+
+
+temp <- data.frame(WPIdata$wid, lead.item1, lead.item2, lead.item3)
+colnames(temp) <- c('id','Lead item PC1','Lead item PC2', 'Lead item PC3')
+temp2 <- merge(voronoi.f,temp, by='id')
+
+map1 <- ggplot(temp2, aes(x = long, y = lat, fill = factor(temp2[,8]))) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + theme_bw()
+map1 <- map1 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('a) Dry season lead item, PC1') + theme(rect=element_blank(), line=element_blank(), axis.text.x = element_blank(), axis.text.y=element_blank(),axis.title.x=element_blank(), axis.title.y=element_blank()) + scale_fill_discrete(name='Component')
+
+map2 <- ggplot(temp2, aes(x = long, y = lat, fill = factor(temp2[,9]))) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + theme_bw()
+map2 <- map2 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('b) Dry season lead item, PC2') + theme(rect=element_blank(), line=element_blank(), axis.text.x = element_blank(), axis.text.y=element_blank(),axis.title.x=element_blank(), axis.title.y=element_blank()) + scale_fill_discrete(name='Component')
+
+map3 <- ggplot(temp2, aes(x = long, y = lat, fill = factor(temp2[,10]))) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + theme_bw()
+map3 <- map3 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('c) Dry season lead item, PC3') + theme(rect=element_blank(), line=element_blank(), axis.text.x = element_blank(), axis.text.y=element_blank(),axis.title.x=element_blank(), axis.title.y=element_blank()) + scale_fill_discrete(name='Component')
+
+temp <- table(lead.item1)
+temp <- as.data.frame(temp)
+bar1 <- ggplot(temp) + geom_bar(aes(lead.item1,Freq, fill=factor(lead.item1)), stat='identity') + theme_bw() + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),legend.position="none",axis.text.x = element_text(angle = 45, hjust = 1)) + ggtitle('d) Dry season lead item, PC1')
+
+temp <- table(lead.item2)
+temp <- as.data.frame(temp)
+bar2 <- ggplot(temp) + geom_bar(aes(lead.item2,Freq, fill=factor(lead.item2)), stat='identity') + theme_bw() + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),legend.position="none",axis.text.x = element_text(angle = 45, hjust = 1)) + ggtitle('e) Dry season lead item, PC2')
+
+temp <- table(lead.item3)
+temp <- as.data.frame(temp)
+bar3 <- ggplot(temp) + geom_bar(aes(lead.item3,Freq, fill=factor(lead.item3)), stat='identity') + theme_bw() + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),legend.position="none",axis.text.x = element_text(angle = 45, hjust = 1)) + ggtitle('f) Dry season lead item, PC3')
+
+
+
+
+multiplot(map1,bar1,cols=2)
+multiplot(map2,bar2,cols=2)
+multiplot(map3,bar3,cols=2)
+
+rm('map1','map2','map3','bar1','bar2','bar3','temp','temp2')
+```
+
+ 
+**Figure 5.30. The highest loading (”winning”) dry season WPI components for the first three Principal Components and bar plots of their frequencies.**
+
+The wet season winning variables are far easier to interpret. In each of the first three PC’s there’s a single component that accounts for nearly the entire country. In the first PC, Capacity is the most loaded component for almost the entire country. The only ex-ceptions are a small number of villages in the south along the Mekong, loaded with Use. In addition, the southwestern tip of Xayabouly is loaded with Access, and a small area in Vientiane Province is loaded with Resources. The second PC is nearly entirely loaded with Use, however again, the same areas stand out as different. Capacity is the leading variable along the Mekong as well as in the tip of Xayabouly. In addition, Access is the most important in Vientiane Capital, and parts of Xayabouly and Oudomxai provinces. The third PC is likewise dominated by a single component, Use. Environment is the most loaded in Xekong and mountainous Saravane and Savannakhet as well as in the north in Phongsaly. Xayabouly again stands out being most loaded with Use and Re-sources. It appears that Xayabouly stands out from all the other provinces.
+
+Since looking at the components provides information only on collections on variables, GWPCA was also performed on the individual variables that make out the components (these plots are provided in Appendix 5). The results confirm the findings from the GWPCA on components. In Xayabouly and Vientiane, dry season water availability is the most important driver in the first component, exactly as is seen in Figure 5.30a for Resources component. Elsewhere in northern Laos, road access and travel time to the provincial capital are found important. In the south, percentage of population depending on agri- or aquaculture is loaded the highest. In the second PC, dry availability remains important in the north west. Agri- and aquaculture dependence is again the highest loaded variable, only this time it is so throughout the country. The final third PC cov-ered is very mixed, with five variables similarly loaded. These are agri- and aquaculture dependence, agricultural area per person, road access, soil degradation and toilet type.
+
+```{r}
+########## wet season
+# plot lead item
+local.loadings1 <- wetWPI_gwpca_400NN_comp$loadings[,,1] 
+local.loadings2 <- wetWPI_gwpca_400NN_comp$loadings[,,2]
+local.loadings3 <- wetWPI_gwpca_400NN_comp$loadings[,,3]
+lead.item1 <- colnames(local.loadings1)[max.col(abs(local.loadings1))]
+lead.item2 <- colnames(local.loadings2)[max.col(abs(local.loadings2))]
+lead.item3 <- colnames(local.loadings3)[max.col(abs(local.loadings3))]
+
+
+temp <- data.frame(WPIdata$wid, lead.item1, lead.item2, lead.item3)
+colnames(temp) <- c('id','Lead item PC1','Lead item PC2', 'Lead item PC3')
+temp2 <- merge(voronoi.f,temp, by='id')
+
+map1 <- ggplot(temp2, aes(x = long, y = lat, fill = factor(temp2[,8]))) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + theme_bw()
+map1 <- map1 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('a) Wet season lead item, PC1') + theme(rect=element_blank(), line=element_blank(), axis.text.x = element_blank(), axis.text.y=element_blank(),axis.title.x=element_blank(), axis.title.y=element_blank()) + scale_fill_discrete(name='Component')
+
+map2 <- ggplot(temp2, aes(x = long, y = lat, fill = factor(temp2[,9]))) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + theme_bw()
+map2 <- map2 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('b) Wet season lead item, PC2') + theme(rect=element_blank(), line=element_blank(), axis.text.x = element_blank(), axis.text.y=element_blank(),axis.title.x=element_blank(), axis.title.y=element_blank()) + scale_fill_discrete(name='Component')
+
+map3 <- ggplot(temp2, aes(x = long, y = lat, fill = factor(temp2[,10]))) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + theme_bw()
+map3 <- map3 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('c) Wet season lead item, PC3') + theme(rect=element_blank(), line=element_blank(), axis.text.x = element_blank(), axis.text.y=element_blank(),axis.title.x=element_blank(), axis.title.y=element_blank()) + scale_fill_discrete(name='Component')
+
+temp <- table(lead.item1)
+temp <- as.data.frame(temp)
+bar1 <- ggplot(temp) + geom_bar(aes(lead.item1,Freq, fill=factor(lead.item1)), stat='identity') + theme_bw() + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),legend.position="none",axis.text.x = element_text(angle = 45, hjust = 1)) + ggtitle('d) Wet season lead item, PC1')
+
+temp <- table(lead.item2)
+temp <- as.data.frame(temp)
+bar2 <- ggplot(temp) + geom_bar(aes(lead.item2,Freq, fill=factor(lead.item2)), stat='identity') + theme_bw() + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),legend.position="none",axis.text.x = element_text(angle = 45, hjust = 1)) + ggtitle('e) Wet season lead item, PC2')
+
+temp <- table(lead.item3)
+temp <- as.data.frame(temp)
+bar3 <- ggplot(temp) + geom_bar(aes(lead.item3,Freq, fill=factor(lead.item3)), stat='identity') + theme_bw() + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),legend.position="none",axis.text.x = element_text(angle = 45, hjust = 1)) + ggtitle('f) Wet season lead item, PC3')
+
+
+
+
+
+multiplot(map1,bar1,cols=2)
+multiplot(map2,bar2,cols=2)
+multiplot(map3,bar3,cols=2)
+
+```
+
+ 
+**Figure 5.31. The highest loading (”winning”) wet season WPI components for the first three Princi-pal Components and bar plots of their frequencies.**
+
+Winning variables for wet season variable GWPCA also confirm the earlier findings. Wet season road access is the most important variable in the entire country apart from surroundings of Vientiane Capital. In the second PC, agri- and aquaculture dependence is similarly dominating the entire country, however there are small areas in which other variables become more important. The third PC is, like in dry season, much more mixed, however a few characterizations can be made. Again, agri- and aquaculture dependence is a major factor, along with road access. In addition, toilet type is important across the country. 
+
+```{r, message=FALSE, warning=FALSE}
+####### PLOT
+
+# plot weighting scheme box plots
+# dry
+temp <- as.data.frame(weights.gwpca.dry)
+#pairs(temp, pch='.', upper.panel = panel.cor, diag.panel = panel.hist, lower.panel = panel.smooth)
+temp <- melt(temp)
+p1 <- ggplot(data = temp, aes(variable, value, fill = factor(variable))) + geom_jitter(position=position_jitter(width=.6), aes(color=factor(variable)) ,pch='.') + geom_boxplot(outlier.shape=NA) + theme_bw() + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),legend.position="none") + ggtitle('Dry season') + coord_flip()
+# wet
+temp <- as.data.frame(weights.gwpca.wet)
+#pairs(temp, pch='.', upper.panel = panel.cor, diag.panel = panel.hist, lower.panel = panel.smooth)
+temp <- melt(temp)
+p2 <- ggplot(data = temp, aes(variable, value, fill = factor(variable))) + geom_jitter(position=position_jitter(width=.6), aes(color=factor(variable)) ,pch='.') + geom_boxplot(outlier.shape=NA) + theme_bw() + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),legend.position="none") + ggtitle('Wet season') + coord_flip()
+
+multiplot(p1,p2,cols=2)
+rm('p1','p2')
+
+```
+
+ 
+**Figure 5.32. Boxplot of GWPCA derived weights for individual villages.**
+
+
+In addition to looking at the winning components and variables, localized weights were calculated for each village and are presented in the boxplot in Figure 5.32. As can be seen from the graph, the weights have very large ranges, which may be expected due to the short bandwidth of 400 nearest neighbours. However, interestingly, a similar rela-tionship exists between dry and wet season weights as is in the ones derived by global PCA (Table 5.6). As in the global counterpart, Resources and Environment get generally higher weights in dry season than in wet season, and the social components of Use, Ca-pacity and Access all have higher weight in the wet season. However, a major difference between the global and local weights is that in the local ones, Environment is assigned much lower weights. In addition, the social components are assigned a considerably higher weight in the local version of the weights.
+
+```{r}
+########## Map weights
+
+########### DRY SEASON
+temp <- data.frame(WPIdata$wid, weights.gwpca.dry)
+colnames(temp) <- c('id','RES','ACC', 'CAP','USE','ENV')
+temp2 <- merge(voronoi.f,temp, by='id')
+
+map1 <- ggplot(temp2, aes(x = long, y = lat, fill = RES)) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + scale_fill_gradient2(low="#a50026", mid="white", high="#313695", midpoint=0.2) + theme_bw()
+map1 <- map1 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('a) Dry season \n RES weights') + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),axis.ticks=element_blank(),axis.text.x=element_blank(), axis.text.y=element_blank())
+
+map2 <- ggplot(temp2, aes(x = long, y = lat, fill = ACC)) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + scale_fill_gradient2(low="#a50026", mid="white", high="#313695", midpoint=0.2) + theme_bw()
+map2 <- map2 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('b) Dry season \n ACC weights') + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),axis.ticks=element_blank(),axis.text.x=element_blank(), axis.text.y=element_blank())
+
+map3 <- ggplot(temp2, aes(x = long, y = lat, fill = CAP)) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + scale_fill_gradient2(low="#a50026", mid="white", high="#313695", midpoint=0.2) + theme_bw()
+map3 <- map3 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('c) Dry season \n CAP weights') + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),axis.ticks=element_blank(),axis.text.x=element_blank(), axis.text.y=element_blank())
+
+map4 <- ggplot(temp2, aes(x = long, y = lat, fill = USE)) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + scale_fill_gradient2(low="#a50026", mid="white", high="#313695", midpoint=0.2) + theme_bw()
+map4 <- map4 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('d) Dry season \n USE weights') + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),axis.ticks=element_blank(),axis.text.x=element_blank(), axis.text.y=element_blank())
+
+map5 <- ggplot(temp2, aes(x = long, y = lat, fill = ENV)) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + scale_fill_gradient2(low="#a50026", mid="white", high="#313695", midpoint=0.2) + theme_bw()
+map5 <- map5 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('e) Dry season \n ENV weights') + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),axis.ticks=element_blank(),axis.text.x=element_blank(), axis.text.y=element_blank())
+
+multiplot(map1,map4,map2,map5,map3, cols=3)
+
+
+
+########## WET SEASON
+temp <- data.frame(WPIdata$wid, weights.gwpca.wet)
+colnames(temp) <- c('id','RES','ACC', 'CAP','USE','ENV')
+temp2 <- merge(voronoi.f,temp, by='id')
+
+map1 <- ggplot(temp2, aes(x = long, y = lat, fill = RES)) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + scale_fill_gradient2(low="#c51b7d", mid="white", high="#4d9221", midpoint=0.2) + theme_bw()
+map1 <- map1 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('f) Wet season \n RES weights') + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),axis.ticks=element_blank(),axis.text.x=element_blank(), axis.text.y=element_blank())
+
+map2 <- ggplot(temp2, aes(x = long, y = lat, fill = ACC)) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + scale_fill_gradient2(low="#c51b7d", mid="white", high="#4d9221", midpoint=0.2) + theme_bw()
+map2 <- map2 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('g) Wet season \n ACC weights') + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),axis.ticks=element_blank(),axis.text.x=element_blank(), axis.text.y=element_blank())
+
+map3 <- ggplot(temp2, aes(x = long, y = lat, fill = CAP)) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + scale_fill_gradient2(low="#c51b7d", mid="white", high="#4d9221", midpoint=0.2) + theme_bw()
+map3 <- map3 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('h) Wet season \n CAP weights') + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),axis.ticks=element_blank(),axis.text.x=element_blank(), axis.text.y=element_blank())
+
+map4 <- ggplot(temp2, aes(x = long, y = lat, fill = USE)) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + scale_fill_gradient2(low="#c51b7d", mid="white", high="#4d9221", midpoint=0.2) + theme_bw()
+map4 <- map4 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('i) Wet season \n USE weights') + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),axis.ticks=element_blank(),axis.text.x=element_blank(), axis.text.y=element_blank())
+
+map5 <- ggplot(temp2, aes(x = long, y = lat, fill = ENV)) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + scale_fill_gradient2(low="#c51b7d", mid="white", high="#4d9221", midpoint=0.2) + theme_bw()
+map5 <- map5 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('j) Wet season \n ENV weights') + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),axis.ticks=element_blank(),axis.text.x=element_blank(), axis.text.y=element_blank())
+
+multiplot(map1,map4,map2,map5,map3, cols=3)
+```
+
+  
+**Figure 5.33. Spatial variation of the locally derived component weights. Subplots a-e show the dry season weighting scheme while f-j present the wet season weighting. Neutral colour signifies an equal weighting scheme where all components are weighted at 0.2.**
+
+
+Such a big difference in weights can be explained with Tobler’s famous First Law of Geography: ”Everything is related to everything else, but near things are more related than distant things” (Tobler, 1970). In other words, it is natural that the environmental components (Environment, Resources) are objectively more important in the scale of the entire country (there are big differences between regions) than in the local scale, where the environment is likely to be similar village-to-village. Hence, in the case of Laos, global and local weights emphasize different aspects of water poverty. Global scale em-phasizes Resources and Environment, to which humans have only limited ability to con-trol. Local scale on the other hand emphasizes the social components of Use, Capacity and Access, which we, as a society, can significantly affect. 
+
+The weights also show major spatial variation, especially in the dry season. The dry sea-son ”barrier” of correlations (Figure 5.26) can be identified in the local weights with Capacity getting lower weights in the northwest while Environment is assigned a higher weight in the same region. The stark border is visible in different components; RES and USE divided the regions in the correlation plots, while here, in the local weights, is seen in CAP and ENV. For the other dry season components, weights vary across the coun-try creating several hot- and cold spots. In Resources, weights are generally low, how-ever there is a major hotspot of higher weights in Xayabouly and southwestern Vienti-ane Province. This is the area that contains many of the villages under water scarcity, as was shown in Figure 5.4. Weights for Access component are also low in this area, as opposed to generally high scores in the rest of the country. In the wet season weights, the area that mostly point out in the local weights is formed by Xayabouly, Vientiane Province and Xiengkhouang. These areas contain low CAP and high ENV weights, which is opposite from the rest of the country (apart from smaller hot and cold regions). 
+
+Spatial autocorrelation of the weights was analysed and found to autocorrelate to an extreme degree, despite the seemingly random patterns visible in Figure 5.33. Moran’s I, for every weight on both seasons is above 0.9, whereas conventional interpretation for strongly autocorrelated spatial phenomenon is Moran’s I of above 0.3 (Getis, 2010). 
+
+WPI calculated with the local weights is shown in Figure 5.34 for both seasons. Curi-ously, the distribution of WPI in both seasons are almost identical with mean and medi-an WPI between 53 and 55 for both of the seasons. In the wet season the distribution is slightly wider. Similar spatial pattern between high and low WPI can be found in the maps as is evident in the global case (correlation between global and local WPI is 0.81 for dry season and 0.82 for wet season). However, it should be noted that the maps cal-culated with global weights are not directly comparable to the maps in Figure 5.34 due to the global weights used to calculate WPI are derived using both seasons while the local ones utilize only a single-season. Therefore, the seasonal calculated WPI values are not directly comparable to each other either. To make the interpretation a little bit tougher still, the WPI values are local, meaning that one can only directly compare a village WPI value to the immediate neighbours only (the WPI is calculated with differ-ent weights for each village – Tobler’s First Law of Geography applies here too).
+
+Bearing in mind the limitations mentioned in the previous paragraph, the maps a) and b) in Figure 5.34 add evidence to some earlier findings. First, the maps confirm that the difference between water poor and water rich areas increase in the wet season. This can be seen when looking at the intensity of colours in the maps: in the dry season we can see more mid-range colours whereas in the wet season we see much more distinct bor-ders between the poor and the rich. Second, the same areas appear poor regardless of the weighting scheme (global vs. local).
+
+In addition to the locally weighted WPI, Figure 5.34c and Figure 5.34d show the dif-ference between single-season (globally derived) WPI and the locally weighted counter-part. WPI derived from local weights on average results in a lower index value than the locally weighted ones. For both seasons, the difference is slightly over 3 index points with a near-identical distribution. The spatial pattern reveal that the local weighting as-signs a higher WPI in the water-rich areas where as in water-poor areas local weights results in a lower WPI. 
+
+```{r}
+###### comparison // GGPLOT2
+temp <- data.frame(WPIdata$wid, WPIdata$dryWPIggwpca, WPIdata$wetWPIggwpca, WPIdata$dryWPIggwpca-WPIdata$dryWPIsinglegpca, WPIdata$wetWPIggwpca-WPIdata$wetWPIsinglegpca)
+colnames(temp) <- c('id','Dry','Wet', 'DryDiff','WetDiff')
+temp2 <- merge(voronoi.f,temp, by='id')
+
+
+map1 <- ggplot(temp2, aes(x = long, y = lat, fill = Dry)) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + scale_fill_gradient2(low="#a50026", mid="white", high="#313695", midpoint=50) + theme_bw()
+map1 <- map1 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('a) Dry season WPI (GWPCA)') + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),axis.ticks=element_blank(),axis.text.x=element_blank(), axis.text.y=element_blank())
+
+
+map2 <- ggplot(temp2, aes(x = long, y = lat, fill = Wet)) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + scale_fill_gradient2(low="#a50026", mid="white", high="#313695", midpoint=50) + theme_bw()
+map2 <- map2 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('b) Wet season WPI (GWPCA)') + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),axis.ticks=element_blank(),axis.text.x=element_blank(), axis.text.y=element_blank())
+
+map3 <- ggplot(temp2, aes(x = long, y = lat, fill = DryDiff)) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + scale_fill_gradient2(low="#7f3b08", mid="#f7f7f7", high="#2d004b", midpoint=0, name='Dry season \n difference') + theme_bw()
+map3 <- map3 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('c) Difference between locally and \n globally weighted dry WPI') + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),axis.ticks=element_blank(),axis.text.x=element_blank(), axis.text.y=element_blank())
+
+map4 <- ggplot(temp2, aes(x = long, y = lat, fill = WetDiff)) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + scale_fill_gradient2(low="#7f3b08", mid="#f7f7f7", high="#2d004b", midpoint=0, name='Wet season \n difference') + theme_bw()
+map4 <- map4 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('d) Difference between locally and \n globally weighted wet WPI') + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),axis.ticks=element_blank(),axis.text.x=element_blank(), axis.text.y=element_blank())
+
+multiplot(map1,map3,cols=2)
+multiplot(map2,map4,cols=2)
+
+```
+
+ 
+**Figure 5.34. WPI calculated using locally derived weights for a) dry and b) wet season. The plots on the second row show the difference between WPI calculated from locally and globally weighted WPI for c) dry and d) wet season. The difference is calculated by subtracting globally weighted WPI from the locally weighted one.**
+
+
+In addition, the difference between the GWPCA-weighted seasonal WPI was plotted and shown in Figure 5.35. This map represents the relative water poverty between sea-sons. In other words, the areas with a negative value (WPI higher in dry season) are rela-tively better off during the dry season than in the wet season when comparing to their immediate neighbours (400 nearest neighbours), and areas with a positive value are rela-tively better off in the wet season.  However, this interpretation does not explain the large patches of uniform colouring. It was mentioned above that the distribution of WPI scores between the season are, in practise, identical. The colouring can therefore, despite the fact that weighting was derived locally, be used to compare the overall position of WPI ranks (in fact, it is nearly identical to a rank map, provided in Appendix 5) between seasons. In this interpretation, the blue areas have a much better rank in the wet season than in the dry season, and red ones vice versa. There are big regional differences on how this ranking relates to water poverty. Generally, the north (excluding Vientiane Capital, Vientiane Province and Xayabouly) get a higher rank in the dry season than in the wet season. The most likely reason for this is the lower Resource seasonal variation (physical availability of water increases less toward the wet season) and that majority of villages without road access are located in the north (thus, lowering the wet season CAP score compared to dry season CAP). Similar effect can be seen the southern mountains. 
+
+
+```{r}
+# ####### PLOT wet season - dry season difference (WPI gmean pca)
+
+map1 <- ggplot(temp2, aes(x = long, y = lat, fill = (Wet-Dry))) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + scale_fill_gradient2(low="#a50026", mid="white", high="#313695") + theme_bw()
+map1 <- map1 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('Seasonal difference (GWPCA)') + theme(axis.title.x=element_blank(), axis.title.y=element_blank())
+
+map1
+rm('map1','map2','temp','temp2')
+```
+
+ 
+**Figure 5.35. Dry season WPI subtracted from wet season WPI, both calculated using GWPCA weighting scheme.**
+
+
+Concluding the section, the winning components and variables and the local component weights show that there are important spatial differences in the components that explain majority of the variability in the attribute space. However, major similarities also exist: In GWPCA analysis for both seasons, Capacity is the highest loading in the first PC, Use in the second and Access in the third. The dominance of these variables is much higher in the wet season than in the dry season. This is interpreted here so that in the wet season, Resource or the Environment does not play a major role in the water poverty differences between areas. In the dry season, Resource availability plays a bigger role. The relative causes of water poverty, when looking at the variables, is much higher. Agri- and aquaculture dependence in the villages is the most important, or one of the three most important variables in the entire country across seasons. These findings pro-vide some answers towards the third research question: ”What are the causes of water poverty in Laos? Do the causes differ across space and seasons?” There are important spatial and seasonal differences between the causes. The most important causes, based on the GWPCA analysis are agri- and aquaculture dependence, road access and toilet type. In addition, water availability and travel time to province capital are important in the dry season.

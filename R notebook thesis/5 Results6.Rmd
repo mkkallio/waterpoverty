@@ -1,0 +1,158 @@
+---
+title: "5 Results"
+output: html_notebook
+---
+
+### 5.4.3	Geographically Weighted Regression
+GWR analysis was done starting with selecting significant variables to be used in the model. The variable selection was done through a step-wise selection with an algorithm supplied in R’s ”GWmodel” package. The algorithm starts by calibrating a GWR model with a single independent variable. Cross Validation (CV) score is recorded for each variable, and the variable which produces the smallest CV is selected. Then, the algo-rithm introduces the remaining independent variables in addition to the already selected one. These steps are repeated until CV does not significantly improve. The input for the algorithm were the original values (i.e. not values processed to the scores) and consisted of all variables used to calculate WPI components, added with a number of additional, relevant variables (all of these are listed in Appendix 6). After the independent models were selected with the above algorithm, bandwidth was optimized using a function in GWmodel package. The optimized bandwidths for both dry and wet season are identi-cal; 368 nearest villages for adaptive and 56.5 km for Euclidean bandwidth (however, only adaptive bandwidth was used due to edge effects and to ensure sufficient sample size for each regression point). 
+
+The geographically weighted model fare significantly better in modelling WPI for both of the seasons. R2 is significantly better, as is residual sum of squares, CV and AICc. This gives us additional strong evidence for the first research question. A summary of the model goodness statistics is given in Table 5.10. 
+
+The variables chosen can explain a high proportion of the wet season water poverty, however, dry season phenomena are captured to a lower degree. In addition, the good-ness of the model has a strong spatial variability (see Figure 5.36). While the selected models can explain a large share of WPI, in the dry season the country is split into an eastern part which can be explained to a high degree and (north)western part in which R2 drops to less than 0.70. In addition, the southern Bolaven Plateau stands out as a region where the dry season model does not fare well. This means is that there is a spa-tial process in play which cannot be captured by the list of variables introduced to the model selection algorithm (the entire list is provided in Appendix 6). Curiously, this ef-fect only applies to the dry season; the wet season model performance is good through-out the country (with the exception of the area surrounding the capital city and to a lower degree, Bolaven Plateau). Another implication of this find is that water poverty is driven by different causes in different combinations of geographical and seasonal di-mensions. 
+
+
+**Table 5.10. Model goodness statistics for dry and wet season global and local models.**
+Season	Statistic	Global model	Local model
+Dry	R2	0.60	0.73
+	RSS	175 384	120 744
+	AICc	48 544	46 321
+Wet	R2	0.76	0.84
+	RSS	139 752	93 563
+	AICc	46 666	44 091
+
+
+The same areal division can be seen in the local correlation maps between WPI and RES and USE in Figure 5.26. The northwestern part where local R2 is exhibits a high correla-tion between WPI and Resources, while the eastern part in the division correlates with Use component. This seems to suggest that, in the northeast, there is an environmental phenomenon driving water poverty that is not represented by the variables introduced to the step-wise selection algorithm. This division can also be seen in the coefficient maps (provided in Appendix 6). A number of variables are significant mostly in the northwest, or the sign of coefficient estimates changes between the northwest and the rest of the country. Interesting examples are dry and wet season surface water availability; these are significant predictors only in the northwest and in the poor southeast. In addition, they change sings; in the capital area and southeast, higher dry season water availability is a negative predictor of dry season WPI, while wet season water availability is a posi-tive one. In the northwest, these two variables behave in the opposite manner. Interest-ing here is that the water availability is not a significant predictor for water poverty in central Laos. 
+
+```{r}
+######################
+
+# Prepare required libraries, functions and data
+
+######################
+
+######### Load required libraries 
+library(rgdal)
+library(sp)
+library(GISTools)
+library(spdep)
+library(ggplot2)
+library(gridExtra)
+library(raster)
+library(deldir)
+library(GWmodel)
+library(spgwr)
+library(classInt)
+library(DescTools)
+library(reshape)
+library(cluster)
+library(plotly)
+library(ggiraph)
+
+####################################################################
+####################### Load data 
+####################################################################
+
+load("BG.RData")
+
+
+```
+
+```{r, message=FALSE, warning=FALSE}
+load("SPGWR.RData")
+
+
+temp <- data.frame(WPIdata$wid, dry.gwr.adapt.spgwr$SDF$localR2, wet.gwr.adapt.spgwr$SDF$localR2)
+colnames(temp) <- c('id','DryR2','WetR2')
+temp2 <- merge(voronoi.f,temp, by='id')
+
+map1 <- ggplot(temp2, aes(x = long, y = lat, fill = DryR2)) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + scale_fill_gradient2(low="#a50026", mid="white", high="#313695", midpoint=0.70) + theme_bw()
+map1 <- map1 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('a) Dry season GWR model R-square') + theme(axis.title.x=element_blank(), axis.title.y=element_blank())
+
+map2 <- ggplot(temp2, aes(x = long, y = lat, fill = WetR2)) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + scale_fill_gradient2(low="#a50026", mid="white", high="#313695", midpoint=0.70) + theme_bw()
+map2 <- map2 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('b) Wet season GWR model R-square') + theme(axis.title.x=element_blank(), axis.title.y=element_blank())
+
+multiplot(map1,map2,cols=2)
+
+rm('map1','map2','temp','temp2')
+
+```
+
+
+ 
+**Figure 5.36. GWR model R2 for a) dry and b) wet seasons.**
+ 
+
+**Table 5.11. (Step-wise) selected model variables in the order of selection and the p-values of Monte Carlo test for spatial homogeneity of the coefficients.**
+
+
+
+
+
+The first variables picked in the step-wise selection process are uniform through the en-tire country: higher total population, lack of road access, higher soil degradation, high incidence of poverty and higher share of population depending on agriculture predict lower WPI. On the other hand, high agricultural area, high literacy rate, and high rate of dry season irrigation predict higher WPI. Majority of the other selected variables change sign in different locations and/or the variable is not statistically significant in some parts of the country. 
+
+Wet season coefficient estimates differ from the dry season estimates in three ways: first, less variables are picked by the step-wise algorithm. Second, there is no similar division visible in the estimates as there is in the dry season. Third, the variables change (see Table 5.11). Nine of the first 11 variables are the same, they only change order. Per-centage of crops irrigated changed from dry season to wet season irrigation, and travel time to province capital changed to district capital. This find suggests that, in the wet season, administrative (and other) services should be available in the district capital ra-ther than the provincial capital. Interestingly, in the very southeast corner of the country, higher precipitation predicts lower WPI while the sign is positive for the rest of the country. This coincides with a very strong negative coefficient for slope class, which is a much weaker (or not significant at all) predictor in the rest of the country. Additionally, it is noteworthy that surface water availability is not a significant variable in the wet season model. 
+
+The very strong negative coefficient for slope class is the most probably cause for the extremely low prediction (and high residuals) of the water poorest villages in Xekong province. Maps of predicted values and residuals for both seasons are shown in Figure 5.37. The residuals are normally distributed, but both show a long, narrow tail on the negative side due to the inability of the models to predict WPI for the poorest villages (Xekong, Phongsaly). In addition, it is seen that dry season residuals are higher than the wet season ones. The general patterns of low and high WPI areas, however, follow well the distribution seen earlier in Figure 5.24. This further confirms the good model fit for wet season. 
+
+ 
+```{r}
+
+temp <- data.frame(WPIdata$wid, dry.gwr.adapt.spgwr$lm$fitted.values, dry.gwr.adapt.spgwr$lm$residuals)
+colnames(temp) <- c('id','pred','residuals')
+temp2 <- merge(voronoi.f,temp, by='id')
+
+map1 <- ggplot(temp2, aes(x = long, y = lat, fill = pred)) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + scale_fill_gradient2(low="#a50026", mid="white", high="#313695", midpoint=60) + theme_bw()
+map1 <- map1 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('a) Dry season prediction') + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),axis.ticks=element_blank(),axis.text.x=element_blank(), axis.text.y=element_blank())
+
+map2 <- ggplot(temp2, aes(x = long, y = lat, fill = residuals)) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + scale_fill_gradient2(low="#8e0152", mid="white", high="#276419") + theme_bw()
+map2 <- map2 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('b) Dry season residuals') + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),axis.ticks=element_blank(),axis.text.x=element_blank(), axis.text.y=element_blank())
+
+temp <- data.frame(WPIdata$wid, wet.gwr.adapt.spgwr$lm$fitted.values, wet.gwr.adapt.spgwr$lm$residuals)
+colnames(temp) <- c('id','pred','residuals')
+temp2 <- merge(voronoi.f,temp, by='id')
+
+map3 <- ggplot(temp2, aes(x = long, y = lat, fill = pred)) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + scale_fill_gradient2(low="#a50026", mid="white", high="#313695", midpoint=60) + theme_bw()
+map3 <- map3 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('c) Wet season prediction') + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),axis.ticks=element_blank(),axis.text.x=element_blank(), axis.text.y=element_blank())
+
+map4 <- ggplot(temp2, aes(x = long, y = lat, fill = residuals)) + geom_polygon(aes(group = group), colour = NA) + coord_equal() + scale_fill_gradient2(low="#8e0152", mid="white", high="#276419") + theme_bw()
+map4 <- map4 + geom_polygon(data = LaoAdmin1.f, aes(x = long, y = lat, group = group), colour = 'black', size=0.5, fill = NA) + coord_equal() + ggtitle('d) Wet season residuals') + theme(axis.title.x=element_blank(), axis.title.y=element_blank(),axis.ticks=element_blank(),axis.text.x=element_blank(), axis.text.y=element_blank())
+
+
+multiplot(map1,map3, cols=2)
+multiplot(map2,map4, cols=2)
+
+
+```
+
+
+**Figure 5.37. Dry season model prediction (a) and residuals (b) and wet season model prediction (c) and (d) residuals.**
+
+
+The spatial heterogeneity of coefficient estimates from both of the models were tested under Monte Carlo randomization. The p-values signifying the probability of the varia-ble being a global one (showing no spatial differences) are shown in Table 5.11. Only a handful of variables are global with a high certainty. In the dry season these are frequent non-specified disasters (99%) and frequent flood disasters (84%). In the wet season: frequent disasters of the type ’Other’ (88%), share of population depending on aquacul-ture (85%) and to a lower degree the change of onset of wet season (67%), frequent droughts (63%) and travel time to a health centre (58%). The majority of all variables exhibit spatial behaviour with a very high confidence, adding to the mounting evidence towards research questions 1 and 3a. The models were also tested with Leung’s F1 and F2 tests (F3 test was running for more than 120 hours until the process crashed and therefore could not be finished). The tests measure whether the GWR model fare signif-icantly better than an ordinary least squares regression using residual sum of squares (F1) and analysis of variance (F2). As a result, both tests signify, with an extremely high con-fidence (p-value of 2.2 *10-16 on null hypothesis that there is no significant difference) that the local model is better at explaining WPI. This applies for both, the dry and wet season models. 
+
+
+**Table 5.12. Variables with collinearity problems according to VIF and VDP diagnostics.**
+Season	Variable	VIF >10	VDP >0.5	Comment
+Dry Season	Intercept		x	Problematic in some regions
+	TimeProCap	x		Problematic mainly in Houaphan
+	TimeDisCap	x		Problematic mainly in Houaphan
+	WetPrec	x	x	Collinearity in Vientiane Capital, north-west (Bokeo/Louangnamtha) and small areas in Champasak, Khammouane and mountainous Saravane.
+	DryPrec	x	x	Collinearity in Bokeo, Louangnamtha, Vientiane Capital and Houaphan
+	AvMaxDDay	x	x	Collinear only in Champasak
+	DrySurf	x	x	Very high VIF, medium in VDP
+	WetSurf	x	x	Very high VIF, medium in VDP
+	TotalCons	x	x	Very high VIF, small areas in VDP
+	ConsIrr	x	x	Very high VIF, small areas in VDP
+Wet Season	TimeDisCap	x		Problematic mainly in Houaphan
+	WetPrec	x	x	Collinearity in Vientiane Capital, north-west (Bokeo/Louangnamtha) and small areas in Champasak, Khammouane and mountainous Saravane.
+	DryPrec	x	x	Collinearity in Bokeo, Louangnamtha, Vientiane Capital and Houaphan
+	TotalCons	x	x	Very high VIF, medium in VDP
+	ConsIrr	x	x	Very high VIF, medium in VDP
+	DrySurf	x		Very high VIF
+	WetSurf	x		Very high VIF
+	AvMaxDDay		x	VDP high in northwest, northeast, mountainous south and Khammouane Province
+
+
+In addition, local collinearity was analysed using Variance Inflation Factor (VIF), Vari-ance Decomposition Proportion (VDP) and Condition Number. The analysis reveals that there is significant collinearity present in some variables (or variable pairs). The collinear-ity problems are summarized in Table 5.12. Condition number is very high all across the country, suggesting that the models may be unstable. This is most likely due to extreme collinearity between the two surface water availability and the two water consumption variables. Dry and wet season GWR model without some of the collinear variables (dry/wet precipitation, irrigation water consumption, dry/wet surface water availability) was run resulting in very small changes in R2, which suggests that these variables were not relevant in the model.  In addition, the collinearity diagnostics suggest that care must be taken when drawing conclusions from coefficient estimates especially in Houa-phan, the northwest corner where Bokeo and Louangnamtha are located, and Kham-mouane Province. 
+
+Summarizing the GWR analysis, a number of causes for water poverty has been identi-fied. The most important predictors for WPI are nearly identical between dry and wet season: Higher share of population depending on aquaculture, travel time to district or province capital, worse soil degradation, lack of road access, higher total village popula-tion and higher incidence of poverty all predict lower water poorness across the entire country. Positive variables are total agricultural area, high literacy rate, high share of irrigated crops and high rainfall (except in the very south where higher rainfall predicts lower WPI). These are mutual factors for both of the seasons. The remainder of variables slightly differ: Dry season model contains more environmental variables than the wet season model. This is interpreted as further evidence of earlier conclusions; water pov-erty is driven by humanistic drivers in the wet season while in the dry season actual wa-ter availability is a meaningful factor. In addition to the variables determining WPI, the research question of whether the causes change according to location and season has been addressed. GWR analysis found evidence that there is a significant difference be-tween the variables explaining seasonal WPI, and it was found that the coefficient esti-mates for these variables also vary to a high degree. GWR analysis therefore supports a confirming answer to research question 3a. 
